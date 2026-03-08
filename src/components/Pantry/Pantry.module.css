@@ -1,0 +1,96 @@
+.pantrySection {
+    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 8px;
+}
+
+.title {
+    margin-top: 0;
+    color: #111827;
+    font-size: 1.5rem;
+}
+
+.inputGroup {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.inputField {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 1rem;
+}
+
+.nameInput {
+    flex: 2;
+}
+
+.qtyInput {
+    flex: 0.5;
+    width: 80px;
+}
+
+.addButton {
+    background-color: #059669;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+
+.addButton:hover {
+    background-color: #047857;
+}
+
+.ingredientList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 12px;
+}
+
+.ingredientItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    transition: box-shadow 0.2s;
+}
+
+.ingredientItem:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.stockBadge {
+    background-color: #e0e7ff;
+    color: #4338ca;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-left: 8px;
+}
+
+.deleteBtn {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0 5px;
+    transition: color 0.2s;
+}
+
+.deleteBtn:hover {
+    color: #dc2626;
+}

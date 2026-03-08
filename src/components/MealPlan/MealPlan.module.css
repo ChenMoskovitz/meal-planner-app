@@ -1,0 +1,262 @@
+/* Container and Layout */
+.container {
+    padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #1f2937;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+/* Week Navigation Controls */
+.navControls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.navButton {
+    padding: 5px 15px;
+    cursor: pointer;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    background: white;
+    transition: background 0.2s;
+}
+
+.navButton:hover {
+    background: #f3f4f6;
+}
+
+/* Save Button */
+.saveButton {
+    background-color: #4338ca;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    border: none;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.saveButton:hover {
+    background-color: #3730a3;
+}
+
+/* The 7-Day Grid */
+.calendarGrid {
+    display: grid;
+    /* Responsive: stays 7 columns on desktop, stacks on mobile if needed */
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
+}
+
+/* Individual Day Box */
+.dayBox {
+    padding: 10px;
+    border-radius: 8px;
+    min-height: 150px;
+    position: relative;
+    border: 1px solid #ddd;
+    background-color: white;
+    transition: transform 0.1s;
+}
+
+.todayBox {
+    border: 3px solid #4338ca;
+    background-color: #f5f7ff;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.todayBadge {
+    position: absolute;
+    top: -10px;
+    right: 10px;
+    background: #4338ca;
+    color: white;
+    fontSize: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: bold;
+    z-index: 1;
+}
+
+.dateLabel {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+/* Meal Content inside Day Box */
+.mealCard {
+    background: #e0e7ff;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.sideText {
+    font-size: 0.8rem;
+    color: #555;
+}
+
+.typeLabel {
+    font-size: 0.75rem;
+    color: #4338ca;
+    margin-top: 4px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+/* Component Buttons (+ Side, + Veggie) */
+.actionArea {
+    margin-top: 10px;
+    border-top: 1px solid #c7d2fe;
+    padding-top: 5px;
+    display: flex;
+    gap: 5px;
+}
+
+.smallButton {
+    font-size: 10px;
+    cursor: pointer;
+    background: white;
+    border: 1px solid #c7d2fe;
+    border-radius: 3px;
+}
+
+.removeButton {
+    display: block;
+    font-size: 10px;
+    margin-top: 10px;
+    color: #dc2626;
+    border: none;
+    background: none;
+    cursor: pointer;
+}
+
+/* Empty State Selects */
+.selectInput {
+    width: 100%;
+    padding: 4px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+
+.randomButton {
+    width: 100%;
+    margin-top: 5px;
+    cursor: pointer;
+    padding: 4px;
+    font-size: 0.8rem;
+}
+
+/* Shopping List Section */
+.shoppingSection {
+    margin-top: 30px;
+    padding: 20px;
+    background-color: #f9fafb;
+    border: 2px solid #059669;
+    border-radius: 12px;
+}
+
+.generateButton {
+    padding: 12px 24px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    background-color: #059669;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.generateButton:hover {
+    background-color: #047857;
+}
+
+.shoppingGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+}
+
+.shoppingItem {
+    display: flex;
+    align-items: center;
+    background: white;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+}
+.dayNutritionCard {
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 8px;
+    margin-bottom: 10px;
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Creates a neat 2x2 grid */
+    gap: 4px;
+    border: 1px solid #eee;
+}
+
+.miniMacro {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #444;
+}
+
+.miniMacro small {
+    color: #888;
+    font-weight: 400;
+}
+.shoppingListCard {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    margin: 20px auto;
+    max-width: 500px;
+    text-align: left;
+}
+
+.shoppingItem {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    list-style: none;
+}
+.weeklySummaryCard {
+    background: #2c3e50;
+    color: white;
+    padding: 20px;
+    border-radius: 12px;
+    margin: 20px auto;
+    max-width: 800px;
+}
+
+.statsGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.statBox {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.totalBadge {
+    margin-top: 15px;
+    font-size: 0.9rem;
+    opacity: 0.8;
+    border-top: 1px solid rgba(255,255,255,0.2);
+    padding-top: 10px;
+}
