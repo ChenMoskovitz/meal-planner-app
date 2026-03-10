@@ -260,3 +260,11 @@
     border-top: 1px solid rgba(255,255,255,0.2);
     padding-top: 10px;
 }
+.leftoverSticker {
+    background-color: rgba(131, 23, 129, 0.26); /* Light green */
+    color: #065f46;            /* Dark green text */
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    display: inline-block;
+}
