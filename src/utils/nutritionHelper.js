@@ -1,4 +1,4 @@
-import { supabase } from '../config/supabaseClient.js';
+import { supabase } from '../config/supabaseClient';
 
 /**
  * 1. PANTRY LOGIC
@@ -15,13 +15,19 @@ export const formatIngredientNutrition = (apiData) => {
 };
 
 /**
- * 2. RECIPE/MEAL/PLAN LOGIC
- * Calculates the total nutrition for a specific recipe by summing its ingredients.
+ * 2. SINGLE RECIPE LOGIC
+ * Calculates nutrition per single portion.
  */
 export async function getRecipeNutrition(recipeId) {
     if (!recipeId) return null;
 
-    const { data, error } = await supabase
+    const { data: recipeData, error: recipeError } = await supabase
+        .from('recipes')
+        .select('base_servings')
+        .eq('id', recipeId)
+        .single();
+
+    const { data: ingredientsData, error: ingError } = await supabase
         .from('recipe_ingredients')
         .select(`
             amount,
@@ -34,12 +40,12 @@ export async function getRecipeNutrition(recipeId) {
         `)
         .eq('recipe_id', recipeId);
 
-    if (error || !data) {
-        console.error("Error fetching recipe nutrition:", error);
+    if (recipeError || ingError || !ingredientsData) {
+        console.error("Error fetching recipe nutrition:", recipeError || ingError);
         return null;
     }
 
-    return data.reduce((acc, item) => {
+    const totalNutrition = ingredientsData.reduce((acc, item) => {
         const ing = item.ingredients;
         return {
             calories: acc.calories + (item.amount * (ing.calories_per_unit || 0)),
@@ -48,29 +54,33 @@ export async function getRecipeNutrition(recipeId) {
             fiber: acc.fiber + (item.amount * (ing.fiber_per_unit || 0))
         };
     }, { calories: 0, protein: 0, fat: 0, fiber: 0 });
+
+    const servings = recipeData?.base_servings || 1;
+
+    return {
+        calories: totalNutrition.calories / servings,
+        protein: totalNutrition.protein / servings,
+        fat: totalNutrition.fat / servings,
+        fiber: totalNutrition.fiber / servings
+    };
 }
 
 /**
- * Calculates the total nutrition for multiple recipes combined.
- * Useful for summing up a whole day (Main + Side + Veggie).
+ * 3. MULTI-RECIPE LOGIC (For MealPlan.jsx)
+ * Loops through multiple IDs and sums up their per-portion nutrition.
  */
 export async function getMultiRecipeNutrition(recipeIds) {
-    // Filter out any null or undefined IDs
-    const validIds = recipeIds.filter(id => id != null);
-    if (validIds.length === 0) return { calories: 0, protein: 0, fat: 0, fiber: 0 };
+    if (!recipeIds || recipeIds.length === 0) return null;
 
-    const totals = { calories: 0, protein: 0, fat: 0, fiber: 0 };
+    const results = await Promise.all(recipeIds.map(id => getRecipeNutrition(id)));
 
-    // Loop through each ID and add its nutrition to the total
-    for (const id of validIds) {
-        const recipeNutri = await getRecipeNutrition(id);
-        if (recipeNutri) {
-            totals.calories += recipeNutri.calories;
-            totals.protein += recipeNutri.protein;
-            totals.fat += recipeNutri.fat;
-            totals.fiber += recipeNutri.fiber;
-        }
-    }
-
-    return totals;
+    return results.reduce((acc, curr) => {
+        if (!curr) return acc;
+        return {
+            calories: acc.calories + curr.calories,
+            protein: acc.protein + curr.protein,
+            fat: acc.fat + curr.fat,
+            fiber: acc.fiber + curr.fiber
+        };
+    }, { calories: 0, protein: 0, fat: 0, fiber: 0 });
 }
