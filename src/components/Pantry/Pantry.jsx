@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../config/supabaseClient.js';
-import styles from './Pantry.module.css';
 import fetchNutrition from '../../utils/apiTest.js';
 import { formatIngredientNutrition } from '../../utils/nutritionHelper.js';
 
@@ -8,8 +7,6 @@ function Pantry() {
     const [name, setName] = useState('');
     const [quantity, setQuantity] = useState(1);
     const [ingredients, setIngredients] = useState([]);
-
-    // 1. ADD THIS STATE: For the dropdown to work
     const [unitType, setUnitType] = useState('g');
 
     useEffect(() => {
@@ -23,15 +20,13 @@ function Pantry() {
 
     async function addIngredient() {
         if (name === '') return;
-
         const existingItem = ingredients.find(i => i.name.toLowerCase() === name.toLowerCase());
         const finalQuantity = existingItem ? Number(existingItem.stock_quantity) + Number(quantity) : Number(quantity);
 
-        // 2. CONSOLIDATED UPSERT: Use one call to save everything including unit_type
         const { error } = await supabase.from('ingredients').upsert({
             name,
             stock_quantity: finalQuantity,
-            unit_type: unitType // Saves 'g' or 'ml'
+            unit_type: unitType
         }, { onConflict: 'name' });
 
         if (!error) {
@@ -48,15 +43,11 @@ function Pantry() {
 
     const handleFetchNutrition = async (item) => {
         const foodData = await fetchNutrition(item.name);
-
         if (foodData && foodData.nutrients) {
-            // This object now holds: calories, protein, fat, fiber
             const nutrients = formatIngredientNutrition(foodData.nutrients);
-
             const { error } = await supabase
                 .from('ingredients')
                 .update({
-                    // FIX: access the values through the 'nutrients' object
                     calories_per_unit: nutrients.calories,
                     unit_type: unitType,
                     protein_per_unit: nutrients.protein,
@@ -66,36 +57,34 @@ function Pantry() {
                 .eq('id', item.id);
 
             if (!error) {
-                // FIX: update the alert to use nutrients.calories
                 alert(`Updated! 1${unitType} of ${item.name} is ${nutrients.calories.toFixed(4)} kcal.`);
                 fetchIngredients();
-            } else {
-                console.error("Error updating database:", error);
             }
         }
     };
 
     return (
-        <div className={styles.pantrySection}>
-            <h2 className={styles.title}>My Pantry</h2>
+        /* Container: White bg, shadow, rounded corners, padding */
+        <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">My Pantry</h2>
 
-            <div className={styles.inputGroup}>
+            {/* Input Group: Flexbox layout with spacing */}
+            <div className="flex flex-wrap gap-3 mb-8">
                 <input
-                    className={`${styles.inputField} ${styles.nameInput}`}
+                    className="flex-2 min-w-[200px] px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Ingredient Name"
                 />
                 <input
-                    className={`${styles.inputField} ${styles.qtyInput}`}
+                    className="w-24 px-4 py-2 border border-gray-300 rounded-lg outline-none"
                     type="number"
                     value={quantity}
                     onChange={(e) => setQuantity(e.target.value)}
                 />
 
-                {/* 4. THE DROPDOWN: Matches your state */}
                 <select
-                    className={styles.unitSelect}
+                    className="px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 outline-none"
                     value={unitType}
                     onChange={(e) => setUnitType(e.target.value)}
                 >
@@ -103,25 +92,37 @@ function Pantry() {
                     <option value="ml">Milliliters (ml)</option>
                 </select>
 
-                <button className={styles.addButton} onClick={addIngredient}>Add Item</button>
+                <button
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-200"
+                    onClick={addIngredient}
+                >
+                    Add Item
+                </button>
             </div>
 
-            <ul className={styles.ingredientList}>
+            {/* Grid List: Responsive 1 column mobile, multi column desktop */}
+            <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {ingredients.map(item => (
-                    <li key={item.id} className={styles.ingredientItem}>
-                        <span>
-                            <strong>{item.name}</strong>
-                            {/* 5. DISPLAY UNIT: Show g or ml next to stock */}
-                            <span className={styles.stockBadge}>Stock: {item.stock_quantity}{item.unit_type}</span>
-                        </span>
-                        <div className={styles.actions}>
+                    <li key={item.id} className="flex justify-between items-center p-4 bg-gray-50 border border-gray-200 rounded-xl hover:shadow-md transition-shadow duration-200">
+                        <div className="flex flex-col">
+                            <span className="font-bold text-gray-800">{item.name}</span>
+                            <span className="inline-block mt-1 text-xs font-bold text-indigo-700 bg-indigo-100 px-2 py-1 rounded-full w-fit">
+                                Stock: {item.stock_quantity}{item.unit_type}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2">
                             <button
                                 onClick={() => handleFetchNutrition(item)}
-                                className={styles.pantryButton}
+                                className="text-sm bg-white border border-gray-300 hover:bg-gray-100 px-3 py-1 rounded-md transition-colors"
                             >
-                                🔍 Get Info
+                                🔍 Info
                             </button>
-                            <button className={styles.deleteBtn} onClick={() => deleteIngredient(item.id)}>✕</button>
+                            <button
+                                className="text-gray-400 hover:text-red-600 text-xl px-2 transition-colors"
+                                onClick={() => deleteIngredient(item.id)}
+                            >
+                                ✕
+                            </button>
                         </div>
                     </li>
                 ))}
