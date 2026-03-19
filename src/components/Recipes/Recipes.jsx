@@ -148,6 +148,50 @@ function Recipes() {
         const totals = await getRecipeNutrition(recipeId);
         if (totals) setSelectedNutrition({ id: recipeId, ...totals });
     };
+    async function uploadRecipeImage(e) {
+        const file = e.target.files[0];
+        if (!file || !selectedRecipe) return;
+
+        setUploadingImage(true);
+
+        // Create a unique filename: recipeID-timestamp.extension
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${selectedRecipe.id}-${Date.now()}.${fileExt}`;
+
+        // 1. Upload the file to your "recipe-images" bucket
+        const { error: uploadError } = await supabase.storage
+            .from('recipe-images') // Matched to your screenshot
+            .upload(fileName, file);
+
+        if (uploadError) {
+            alert("Upload failed: " + uploadError.message);
+            setUploadingImage(false);
+            return;
+        }
+
+        // 2. Get the Public URL so we can save it to the database
+        const { data } = supabase.storage
+            .from('recipe-images')
+            .getPublicUrl(fileName);
+
+        const publicUrl = data.publicUrl;
+
+        // 3. Update the 'recipes' table in your database
+        const { error: updateError } = await supabase
+            .from('recipes')
+            .update({ image_url: publicUrl })
+            .eq('id', selectedRecipe.id);
+
+        if (updateError) {
+            alert("Database update failed: " + updateError.message);
+        } else {
+            // Update local state so the image shows up immediately
+            setSelectedRecipe({ ...selectedRecipe, image_url: publicUrl });
+            fetchRecipes();
+        }
+
+        setUploadingImage(false);
+    }
 
     return (
         <div className="p-6 bg-white rounded-2xl shadow-sm border border-gray-100">
@@ -222,6 +266,29 @@ function Recipes() {
                                     )}
 
                                     <div className="space-y-6">
+                                        {/* Image Upload Area */}
+                                        <div className="mb-6 p-4 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 flex flex-col items-center">
+                                            {selectedRecipe.image_url ? (
+                                                <img
+                                                    src={selectedRecipe.image_url}
+                                                    className="w-full h-48 object-cover rounded-lg mb-4 shadow-md"
+                                                    alt="Recipe"
+                                                />
+                                            ) : (
+                                                <div className="text-gray-400 mb-4 text-sm font-medium">No photo yet 📸</div>
+                                            )}
+
+                                            <label className="cursor-pointer bg-white border border-gray-300 px-4 py-2 rounded-lg text-xs font-bold hover:bg-gray-100 transition-colors">
+                                                {uploadingImage ? 'Uploading...' : 'Upload Photo'}
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                    onChange={uploadRecipeImage}
+                                                    disabled={uploadingImage}
+                                                />
+                                            </label>
+                                        </div>
                                         <div className="p-4 bg-orange-50 rounded-xl border border-orange-100">
                                             <label className="block text-sm font-black text-orange-800 uppercase mb-2">Servings</label>
                                             <div className="flex items-center gap-4">
