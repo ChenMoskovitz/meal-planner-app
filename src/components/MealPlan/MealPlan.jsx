@@ -162,12 +162,11 @@ function MealPlan() {
 
     // --- 5. Render ---
     return (
-        <div className="max-w-7xl mx-auto p-4 md:p-8 bg-gray-50 min-h-screen">
+        <div className="max-w-7xl mx-auto p-4 md:px-8 pb-8 bg-gray-50">
             {/* Header Section */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <h2 className="text-2xl font-extrabold text-gray-900">📅 Weekly Dinner Plan</h2>
-
                     <div className="flex items-center gap-2">
                         <button className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors" onClick={() => changeWeek(-7)}>⬅️ Prev</button>
                         <button className="px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-bold" onClick={() => setCurrentSunday(getSundayOfCurrentWeek(new Date()))}>Today</button>
@@ -177,10 +176,18 @@ function MealPlan() {
 
                 <div className="flex flex-wrap gap-3 mt-6">
                     <button className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl font-bold shadow-md transition-all active:scale-95" onClick={saveWeeklyPlan}>💾 Save Plan</button>
-                    <button className="bg-white border border-gray-300 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-50" onClick={() => setShowDailyNutrition(!showDailyNutrition)}>
+
+                    {/* FIXED TOGGLES */}
+                    <button
+                        className={`border px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${showDailyNutrition ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                        onClick={() => setShowDailyNutrition(!showDailyNutrition)}
+                    >
                         {showDailyNutrition ? '📊 Hide kcal' : '📊 Show kcal'}
                     </button>
-                    <button className="bg-white border border-gray-300 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-50" onClick={() => setShowWeeklyStats(!showWeeklyStats)}>
+                    <button
+                        className={`border px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${showWeeklyStats ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                        onClick={() => setShowWeeklyStats(!showWeeklyStats)}
+                    >
                         {showWeeklyStats ? '📈 Hide Stats' : '📈 Show Stats'}
                     </button>
 
@@ -191,7 +198,7 @@ function MealPlan() {
                             min="1"
                             value={globalPlannedServings}
                             onChange={(e) => setGlobalPlannedServings(parseInt(e.target.value) || 1)}
-                            className="w-12 bg-transparent border-b-2 border-orange-300 text-center font-bold text-orange-900 outline-none"
+                            className="w-10 bg-transparent border-b-2 border-orange-300 text-center font-bold text-orange-900 outline-none"
                         />
                         <span className="text-sm font-bold text-orange-800">people</span>
                     </div>
@@ -199,26 +206,26 @@ function MealPlan() {
             </div>
 
             {/* Calendar Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-3">
                 {weekDates.map(dateStr => {
                     const isToday = dateStr === todayStr;
                     const dayNutri = dailyNutrition[dateStr];
                     const dayPlan = plan[dateStr];
 
                     return (
-                        <div key={dateStr} className={`relative p-4 rounded-2xl border-2 transition-all ${isToday ? 'bg-blue-50 border-blue-200 ring-2 ring-blue-100' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
+                        <div key={dateStr} className={`relative p-3 rounded-xl border-2 transition-all ${isToday ? 'bg-blue-50 border-blue-200 ring-2 ring-blue-100' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
                             {isToday && <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg uppercase tracking-widest">Today</span>}
 
-                            <div className="text-center mb-4">
-                                <div className="text-xs font-bold text-gray-400 uppercase">{new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                            <div className="text-center mb-3">
+                                <div className="text-[10px] font-bold text-gray-400 uppercase">{new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' })}</div>
                                 <div className="text-lg font-black text-gray-900">{new Date(dateStr + 'T00:00:00').getDate()}</div>
                             </div>
 
+                            {/* RESTORED KCAL DISPLAY */}
                             {showDailyNutrition && dayNutri && dayNutri.calories > 0 && (
-                                <div className="mb-4 p-2 bg-gray-50 rounded-xl border border-gray-100 text-center">
+                                <div className="mb-3 p-2 bg-gray-50 rounded-lg border border-gray-100 text-center animate-in fade-in duration-200">
                                     <div className="text-[9px] uppercase font-bold text-gray-400">Per Serving</div>
-                                    <div className="text-sm font-bold text-gray-700 flex items-center justify-center gap-1">🔥 {dayNutri.calories.toFixed(0)}</div>
-                                    <div className="text-xs font-medium text-gray-500">💪 {dayNutri.protein.toFixed(1)}g P</div>
+                                    <div className="text-xs font-bold text-gray-700 flex items-center justify-center gap-1">🔥 {dayNutri.calories.toFixed(0)} kcal</div>
                                 </div>
                             )}
 
@@ -227,14 +234,15 @@ function MealPlan() {
                                     <div className="p-3 bg-white rounded-xl border border-gray-100 shadow-sm">
                                         <div className="text-sm font-bold text-gray-800 leading-tight mb-1">{dayPlan.main?.name}</div>
 
+                                        {/* RESTORED LEFTOVERS LOGIC */}
                                         {dayPlan.main && (
                                             (() => {
                                                 const base = dayPlan.main.base_servings || 1;
                                                 const leftovers = base - globalPlannedServings;
                                                 return leftovers > 0 ? (
-                                                    <span className="inline-block bg-purple-100 text-purple-700 text-[10px] font-black px-2 py-0.5 rounded-md mt-1">
-                                                        +{leftovers} Leftovers
-                                                    </span>
+                                                    <span className="inline-block bg-purple-100 text-purple-700 text-[10px] font-black px-2 py-0.5 rounded-md mt-1 animate-in zoom-in-50">
+                                                    +{leftovers} Leftovers
+                                                </span>
                                                 ) : null;
                                             })()
                                         )}
@@ -242,25 +250,18 @@ function MealPlan() {
                                         {dayPlan.side && <div className="text-[11px] text-gray-600 mt-2 truncate">🥗 {dayPlan.side.name}</div>}
                                         {dayPlan.veg && <div className="text-[11px] text-gray-600 mt-0.5 truncate">🥦 {dayPlan.veg.name}</div>}
                                     </div>
-
-                                    {dayPlan.main?.type === 'main_dish' && (
-                                        <div className="flex gap-1">
-                                            <button className="flex-1 text-[10px] font-bold bg-white hover:bg-gray-50 border border-gray-200 py-1 rounded-md" onClick={() => addComponentToDay(dateStr, 'side', 'side')}>+Side</button>
-                                            <button className="flex-1 text-[10px] font-bold bg-white hover:bg-gray-50 border border-gray-200 py-1 rounded-md" onClick={() => addComponentToDay(dateStr, 'veg', 'vegetable_side')}>+Veg</button>
-                                        </div>
-                                    )}
                                     <button className="w-full text-[10px] font-bold text-red-400 hover:text-red-600 transition-colors" onClick={() => setPlan(prev => ({ ...prev, [dateStr]: null }))}>Remove</button>
                                 </div>
                             ) : (
                                 <div className="space-y-2">
-                                    <select className="w-full text-xs p-2 bg-gray-50 border border-gray-200 rounded-lg outline-none" onChange={(e) => {
+                                    <select className="w-full text-[10px] p-2 bg-gray-50 border border-gray-200 rounded-lg outline-none" onChange={(e) => {
                                         const selected = recipes.find(r => r.id === e.target.value);
                                         setPlan(prev => ({ ...prev, [dateStr]: { main: selected } }));
                                     }}>
                                         <option value="">Choose...</option>
                                         {recipes.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                                     </select>
-                                    <button className="w-full text-xs font-bold py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg" onClick={() => setRandomForDay(dateStr)}>🎲 Random</button>
+                                    <button className="w-full text-[10px] font-bold py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg" onClick={() => setRandomForDay(dateStr)}>🎲 Random</button>
                                 </div>
                             )}
                         </div>
@@ -268,29 +269,38 @@ function MealPlan() {
                 })}
             </div>
 
-            {/* Weekly Summary */}
+            {/* RESTORED WEEKLY STATS */}
             {showWeeklyStats && (
-                <div className="mt-12 bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
-                    <h3 className="text-xl font-black text-gray-900 mb-6">Weekly Summary (Per Person)</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                        <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                            <div className="text-xs font-bold text-gray-400 uppercase mb-1 tracking-wider">Avg Calories</div>
-                            <div className="text-2xl font-black text-gray-800">🔥 {dailyAverage.calories.toFixed(0)}</div>
+                <div className="mt-8 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm animate-in slide-in-from-bottom-4 duration-300">
+                    <h3 className="text-lg font-black text-gray-900 mb-4">Weekly Summary (Per Person)</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                            <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Avg Calories</div>
+                            <div className="text-xl font-black text-gray-800">🔥 {dailyAverage.calories.toFixed(0)}</div>
                         </div>
-                        {/* Add more stats here as needed */}
+                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                            <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Avg Protein</div>
+                            <div className="text-xl font-black text-gray-800">💪 {dailyAverage.protein.toFixed(1)}g</div>
+                        </div>
                     </div>
                 </div>
             )}
 
-            {/* Shopping List Section */}
-            <div className="mt-16 text-center">
-                <button className="bg-gray-900 hover:bg-black text-white px-8 py-4 rounded-2xl font-black shadow-xl transition-all hover:-translate-y-1 active:scale-95 flex items-center gap-3 mx-auto" onClick={generateShoppingList}>
+            {/* SHOPPING LIST - Compact and No-Gap */}
+            <div className="mt-8 flex flex-col items-center">
+                <button
+                    className="bg-gray-900 hover:bg-black text-white px-8 py-4 rounded-2xl font-black shadow-xl transition-all hover:-translate-y-1 active:scale-95 flex items-center gap-3"
+                    onClick={generateShoppingList}
+                >
                     🛒 Generate Shopping List
                 </button>
 
                 {shoppingList.length > 0 && (
-                    <div className="mt-8 max-w-md mx-auto bg-white p-6 rounded-3xl shadow-2xl border border-gray-50 text-left">
-                        <h3 className="text-lg font-black text-gray-900 mb-4 border-b pb-2">Your Shopping List</h3>
+                    <div className="mt-6 w-full max-w-md bg-white p-6 rounded-3xl shadow-2xl border border-gray-100 text-left animate-in fade-in zoom-in-95 duration-300">
+                        <div className="flex justify-between items-center mb-4 border-b pb-2">
+                            <h3 className="text-lg font-black text-gray-900">Your Shopping List</h3>
+                            <button onClick={() => setShoppingList([])} className="text-xs font-bold text-gray-400 hover:text-red-500 uppercase">Clear ×</button>
+                        </div>
                         <ul className="space-y-3">
                             {shoppingList.map((item, index) => (
                                 <li key={index} className="flex items-center gap-3 text-gray-700 font-medium italic">

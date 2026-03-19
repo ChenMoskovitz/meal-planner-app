@@ -8,6 +8,7 @@ function Pantry() {
     const [quantity, setQuantity] = useState(1);
     const [ingredients, setIngredients] = useState([]);
     const [unitType, setUnitType] = useState('g');
+    const [isVisible, setIsVisible] = useState(true);
 
     useEffect(() => {
         fetchIngredients();
@@ -64,14 +65,21 @@ function Pantry() {
     };
 
     return (
-        /* Container: White bg, shadow, rounded corners, padding */
         <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">My Pantry</h2>
+            {/* 2. UPDATE HEADER: Added flexbox and the toggle button */}
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">My Pantry</h2>
+                <button
+                    onClick={() => setIsVisible(!isVisible)}
+                    className="text-xs font-bold uppercase tracking-wider text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-3 py-1 rounded-lg transition-colors"
+                >
+                    {isVisible ? 'Hide Section ↑' : 'Show Section ↓' }
+                </button>
+            </div>
 
-            {/* Input Group: Flexbox layout with spacing */}
             <div className="flex flex-wrap gap-3 mb-8">
                 <input
-                    className="flex-2 min-w-[200px] px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                    className="flex-2 min-w-[200px] px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Ingredient Name"
@@ -100,33 +108,34 @@ function Pantry() {
                 </button>
             </div>
 
-            {/* Grid List: Responsive 1 column mobile, multi column desktop */}
-            <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {ingredients.map(item => (
-                    <li key={item.id} className="flex justify-between items-center p-4 bg-gray-50 border border-gray-200 rounded-xl hover:shadow-md transition-shadow duration-200">
-                        <div className="flex flex-col">
-                            <span className="font-bold text-gray-800">{item.name}</span>
-                            <span className="inline-block mt-1 text-xs font-bold text-indigo-700 bg-indigo-100 px-2 py-1 rounded-full w-fit">
-                                Stock: {item.stock_quantity}{item.unit_type}
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => handleFetchNutrition(item)}
-                                className="text-sm bg-white border border-gray-300 hover:bg-gray-100 px-3 py-1 rounded-md transition-colors"
-                            >
-                                🔍 Info
-                            </button>
-                            <button
-                                className="text-gray-400 hover:text-red-600 text-xl px-2 transition-colors"
-                                onClick={() => deleteIngredient(item.id)}
-                            >
-                                ✕
-                            </button>
-                        </div>
-                    </li>
-                ))}
-            </ul>
+            {isVisible && (
+                <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                    {ingredients.map(item => (
+                        <li key={item.id} className="flex justify-between items-center p-4 bg-gray-50 border border-gray-200 rounded-xl hover:shadow-md transition-shadow duration-200">
+                            <div className="flex flex-col">
+                                <span className="font-bold text-gray-800">{item.name}</span>
+                                <span className="inline-block mt-1 text-xs font-bold text-indigo-700 bg-indigo-100 px-2 py-1 rounded-full w-fit">
+                                    Stock: {item.stock_quantity}{item.unit_type}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => handleFetchNutrition(item)}
+                                    className="text-sm bg-white border border-gray-300 hover:bg-gray-100 px-3 py-1 rounded-md transition-colors"
+                                >
+                                    🔍 Info
+                                </button>
+                                <button
+                                    className="text-gray-400 hover:text-red-600 text-xl px-2 transition-colors"
+                                    onClick={() => deleteIngredient(item.id)}
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            )}
         </div>
     );
 }
