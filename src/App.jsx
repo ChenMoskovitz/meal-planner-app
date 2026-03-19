@@ -18,14 +18,15 @@ function App() {
         /* This replaces <div className={styles.mainApp}> */
         <div className="min-h-screen bg-gray-50 p-8 space-y-12">
             <h1 className="text-4xl font-black text-center text-gray-900 mb-8">
-                Meal Planner Pro
+                Meal Planner
             </h1>
 
             {/* These replace your <hr className={styles.divider} /> */}
+            <section className="max-w-7xl mx-auto"><MealPlan /></section>
             <section className="max-w-7xl mx-auto"><Pantry /></section>
             <section className="max-w-7xl mx-auto"><Recipes /></section>
             <section className="max-w-7xl mx-auto"><Meals /></section>
-            <section className="max-w-7xl mx-auto"><MealPlan /></section>
+
         </div>
     );
 }
