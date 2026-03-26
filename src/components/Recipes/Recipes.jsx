@@ -79,18 +79,26 @@ function Recipes() {
     }
 
     async function fetchRecipeIngredients(recipeId) {
-        const { data } = await supabase
+        const { data, error } = await supabase
             .from('recipe_ingredients')
             .select(`
-                amount,
-                ingredients:ingredient_id (id, name, unit_type)
-            `)
+            amount,
+            ingredients:ingredient_id (
+                id,
+                name,
+                unit_type,
+                calories_per_unit, -- Added this
+                protein_per_unit  -- Added this
+            )
+        `)
             .eq('recipe_id', recipeId);
 
         if (data) {
             const mergedData = data.map(item => ({
                 ...item.ingredients,
-                amount: item.amount
+                amount: item.amount,
+                // Calculate total for this specific amount
+                totalCalories: (item.ingredients.calories_per_unit * item.amount) / 100,
             }));
             setRecipeIngredients(mergedData);
         }
@@ -139,6 +147,48 @@ function Recipes() {
         if (!window.confirm("Are you sure?")) return;
         const { error } = await supabase.from('recipes').delete().eq('id', recipeId);
         if (!error) { setSelectedRecipe(null); fetchRecipes(); }
+    }
+
+    async function handleApiIngredientSelect(food) {
+        if (!selectedRecipe) return;
+
+        // 1. Check if this ingredient already exists
+        let { data: existingIng } = await supabase
+            .from('ingredients')
+            .select('id')
+            .eq('name', food.label)
+            .single();
+
+        let ingredientId;
+
+        if (existingIng) {
+            ingredientId = existingIng.id;
+        } else {
+            // 2. IMPROVED: Create it with Nutrition data from the API!
+            const { data: newIng, error: createError } = await supabase
+                .from('ingredients')
+                .insert([{
+                    name: food.label,
+                    unit_type: 'g',
+                    stock_quantity: 0,
+                    // These are the new lines pulling data from the API response
+                    calories_per_unit: food.nutrients?.ENERC_KCAL || 0,
+                    protein_per_unit: food.nutrients?.PROCNT || 0,
+                    fat_per_unit: food.nutrients?.FAT || 0
+                }])
+                .select()
+                .single();
+
+            if (createError) {
+                console.error("Error creating ingredient:", createError);
+                return;
+            }
+            ingredientId = newIng.id;
+            fetchPantryItems();
+        }
+
+        // 3. Link it to the recipe
+        addIngredientToRecipe(ingredientId);
     }
 
     const handleSelectRecipe = (recipe) => {

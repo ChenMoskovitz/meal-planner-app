@@ -21,13 +21,13 @@ export const formatIngredientNutrition = (apiData) => {
 export async function getRecipeNutrition(recipeId) {
     if (!recipeId) return null;
 
-    const { data: recipeData, error: recipeError } = await supabase
+    const { data: recipeData } = await supabase
         .from('recipes')
         .select('base_servings')
         .eq('id', recipeId)
         .single();
 
-    const { data: ingredientsData, error: ingError } = await supabase
+    const { data: ingredientsData } = await supabase
         .from('recipe_ingredients')
         .select(`
             amount,
@@ -40,18 +40,18 @@ export async function getRecipeNutrition(recipeId) {
         `)
         .eq('recipe_id', recipeId);
 
-    if (recipeError || ingError || !ingredientsData) {
-        console.error("Error fetching recipe nutrition:", recipeError || ingError);
-        return null;
-    }
+    if (!ingredientsData) return null;
 
+    // The key change is adding "/ 100" to account for the Edamam "per 100g" standard
     const totalNutrition = ingredientsData.reduce((acc, item) => {
         const ing = item.ingredients;
+        const amount = item.amount || 0;
+
         return {
-            calories: acc.calories + (item.amount * (ing.calories_per_unit || 0)),
-            protein: acc.protein + (item.amount * (ing.protein_per_unit || 0)),
-            fat: acc.fat + (item.amount * (ing.fat_per_unit || 0)),
-            fiber: acc.fiber + (item.amount * (ing.fiber_per_unit || 0))
+            calories: acc.calories + (amount * (ing.calories_per_unit || 0)) / 100,
+            protein: acc.protein + (amount * (ing.protein_per_unit || 0)) / 100,
+            fat: acc.fat + (amount * (ing.fat_per_unit || 0)) / 100,
+            fiber: acc.fiber + (amount * (ing.fiber_per_unit || 0)) / 100
         };
     }, { calories: 0, protein: 0, fat: 0, fiber: 0 });
 
