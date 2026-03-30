@@ -30,10 +30,12 @@ function MealPlan() {
     const [showDailyNutrition, setShowDailyNutrition] = useState(false);
     const [showWeeklyStats, setShowWeeklyStats] = useState(false);
     const [globalPlannedServings, setGlobalPlannedServings] = useState(2);
+    const [nutritionalGoals, setNutritionalGoals] = useState(null);
 
     // --- 3. Effects (Logic Unchanged) ---
     useEffect(() => {
         fetchRecipes();
+        fetchUserGoals();
     }, []);
 
     useEffect(() => {
@@ -160,6 +162,20 @@ function MealPlan() {
         fiber: weeklyTotals.fiber / 7,
     };
 
+    async function fetchUserGoals() {
+        const { data, error } = await supabase
+            .from('user_goals')
+            .select('*')
+            .eq('user_label', 'default')
+            .single();
+
+        if (data) {
+            setNutritionalGoals(data);
+        } else if (error) {
+            console.error("Error fetching goals:", error);
+        }
+    }
+
     // --- 5. Render ---
     return (
         <div className="max-w-7xl mx-auto p-4 md:px-8 pb-8 bg-gray-50">
@@ -270,18 +286,86 @@ function MealPlan() {
             </div>
 
             {/* RESTORED WEEKLY STATS */}
-            {showWeeklyStats && (
+            {showWeeklyStats && nutritionalGoals && (
                 <div className="mt-8 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm animate-in slide-in-from-bottom-4 duration-300">
-                    <h3 className="text-lg font-black text-gray-900 mb-4">Weekly Summary (Per Person)</h3>
+                    <h3 className="text-lg font-black text-gray-900 mb-4 tracking-tighter">Weekly Summary (Per Person)</h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+                        {/* 1. Calories - Max Limit Logic */}
                         <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                            <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Avg Calories</div>
-                            <div className="text-xl font-black text-gray-800">🔥 {dailyAverage.calories.toFixed(0)}</div>
+                            <div className="flex justify-between items-start mb-1">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase">Avg Calories</span>
+                                <span className="text-[10px] font-black text-black bg-gray-200 px-1.5 py-0.5 rounded">Goal: {nutritionalGoals.target_calories}</span>
+                            </div>
+                            <div className={`text-xl font-black ${dailyAverage.calories > nutritionalGoals.target_calories ? 'text-red-500' : 'text-emerald-600'}`}>
+                                {dailyAverage.calories > nutritionalGoals.target_calories ? '⚠️' : '✅'} {dailyAverage.calories.toFixed(0)}
+                            </div>
+
+                            {/* Progress Bar for Calories */}
+                            <div className="w-full h-2 bg-gray-200 rounded-full mt-2 overflow-hidden shadow-inner">
+                                <div
+                                    className={`h-full transition-all duration-700 ease-out ${dailyAverage.calories > nutritionalGoals.target_calories ? 'bg-red-500' : 'bg-emerald-500'}`}
+                                    style={{ width: `${Math.min((dailyAverage.calories / nutritionalGoals.target_calories) * 100, 100)}%` }}
+                                ></div>
+                            </div>
+
+                            <p className="text-[9px] mt-2 font-medium text-gray-500 italic">
+                                {dailyAverage.calories > nutritionalGoals.target_calories
+                                    ? `Over daily limit by ${(dailyAverage.calories - nutritionalGoals.target_calories).toFixed(0)} kcal`
+                                    : "Under daily calorie limit"}
+                            </p>
                         </div>
+
+                        {/* 2. Protein - Minimum Target Logic */}
                         <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                            <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Avg Protein</div>
-                            <div className="text-xl font-black text-gray-800">💪 {dailyAverage.protein.toFixed(1)}g</div>
+                            <div className="flex justify-between items-start mb-1">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase">Avg Protein</span>
+                                <span className="text-[10px] font-black text-black bg-gray-200 px-1.5 py-0.5 rounded">Goal: {nutritionalGoals.min_protein}g</span>
+                            </div>
+                            <div className={`text-xl font-black ${dailyAverage.protein >= nutritionalGoals.min_protein ? 'text-emerald-600' : 'text-orange-500'}`}>
+                                {dailyAverage.protein >= nutritionalGoals.min_protein ? '✅' : '💪'} {dailyAverage.protein.toFixed(1)}g
+                            </div>
+
+                            {/* Progress Bar for Protein */}
+                            <div className="w-full h-2 bg-gray-200 rounded-full mt-2 overflow-hidden shadow-inner">
+                                <div
+                                    className={`h-full transition-all duration-700 ease-out ${dailyAverage.protein >= nutritionalGoals.min_protein ? 'bg-emerald-500' : 'bg-orange-500'}`}
+                                    style={{ width: `${Math.min((dailyAverage.protein / nutritionalGoals.min_protein) * 100, 100)}%` }}
+                                ></div>
+                            </div>
+
+                            <p className="text-[9px] mt-2 font-medium text-gray-500 italic">
+                                {dailyAverage.protein >= nutritionalGoals.min_protein
+                                    ? "Protein goal reached!"
+                                    : `Need ${(nutritionalGoals.min_protein - dailyAverage.protein).toFixed(1)}g more daily`}
+                            </p>
                         </div>
+
+                        {/* 3. Fiber - Minimum Target Logic */}
+                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                            <div className="flex justify-between items-start mb-1">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase">Avg Fiber</span>
+                                <span className="text-[10px] font-black text-black bg-gray-200 px-1.5 py-0.5 rounded">Goal: {nutritionalGoals.min_fiber}g</span>
+                            </div>
+                            <div className={`text-xl font-black ${dailyAverage.fiber >= nutritionalGoals.min_fiber ? 'text-emerald-600' : 'text-orange-500'}`}>
+                                {dailyAverage.fiber >= nutritionalGoals.min_fiber ? '✅' : '🍞'} {dailyAverage.fiber.toFixed(1)}g
+                            </div>
+
+                            {/* Progress Bar for Fiber */}
+                            <div className="w-full h-2 bg-gray-200 rounded-full mt-2 overflow-hidden shadow-inner">
+                                <div
+                                    className={`h-full transition-all duration-700 ease-out ${dailyAverage.fiber >= nutritionalGoals.min_fiber ? 'bg-emerald-500' : 'bg-orange-500'}`}
+                                    style={{ width: `${Math.min((dailyAverage.fiber / nutritionalGoals.min_fiber) * 100, 100)}%` }}
+                                ></div>
+                            </div>
+
+                            <p className="text-[9px] mt-2 font-medium text-gray-500 italic">
+                                {dailyAverage.fiber >= nutritionalGoals.min_fiber
+                                    ? "Fiber goal reached!"
+                                    : `Need ${(nutritionalGoals.min_fiber - dailyAverage.fiber).toFixed(1)}g more daily`}
+                            </p>
+                        </div>
+
                     </div>
                 </div>
             )}

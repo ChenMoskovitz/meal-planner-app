@@ -3,6 +3,7 @@ import Pantry from './components/Pantry/Pantry.jsx';
 import Recipes from './components/Recipes/Recipes.jsx';
 import Meals from './components/Meals/Meals.jsx';
 import MealPlan from "./components/MealPlan/MealPlan.jsx";
+import UserGoals from "./components/Goals/UserGoals.jsx";
 
 
 // Only one import for the API tool
@@ -26,6 +27,7 @@ function App() {
             <section className="max-w-7xl mx-auto"><Pantry /></section>
             <section className="max-w-7xl mx-auto"><Recipes /></section>
             <section className="max-w-7xl mx-auto"><Meals /></section>
+            <section className="max-w-7xl mx-auto"><UserGoals /></section>
 
         </div>
     );
