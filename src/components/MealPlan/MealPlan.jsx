@@ -31,6 +31,7 @@ function MealPlan() {
     const [showWeeklyStats, setShowWeeklyStats] = useState(false);
     const [globalPlannedServings, setGlobalPlannedServings] = useState(2);
     const [nutritionalGoals, setNutritionalGoals] = useState(null);
+    const [permanentList, setPermanentList] = useState([]);
 
     // --- 3. Effects (Logic Unchanged) ---
     useEffect(() => {
@@ -121,25 +122,70 @@ function MealPlan() {
             alert("Weekly Plan Saved! 🚀");
         } catch (error) { alert("Failed to save: " + error.message); }
     }
-
-    async function generateShoppingList() {
+// 1. Get all ingredients for the planned meals (Step 2 of your strategy)
+    async function getWeeklyIngredients() {
         const recipeIds = [];
         Object.values(plan).forEach(day => {
             if (day?.main) recipeIds.push(day.main.id);
             if (day?.side) recipeIds.push(day.side.id);
             if (day?.veg) recipeIds.push(day.veg.id);
         });
-        const { data, error } = await supabase.from('recipe_ingredients').select(`amount, ingredients:ingredient_id (name, unit, stock_quantity)`).in('recipe_id', recipeIds);
-        if (error) return;
+
+        if (recipeIds.length === 0) return alert("Add some meals to your plan first!");
+
+        const { data, error } = await supabase
+            .from('recipe_ingredients')
+            .select(`amount, ingredients:ingredient_id (name, unit)`)
+            .in('recipe_id', recipeIds);
+
+        if (error) return console.error(error);
+
+        // Group ingredients so "Onion" doesn't appear 5 times
         const totals = data.reduce((acc, item) => {
             if (!item.ingredients) return acc;
             const name = item.ingredients.name;
-            if (!acc[name]) acc[name] = { amount: 0, unit: item.ingredients.unit || '', stock: item.ingredients.stock_quantity || 0 };
+            if (!acc[name]) acc[name] = { amount: 0, unit: item.ingredients.unit || '' };
             acc[name].amount += (item.amount || 0);
             return acc;
         }, {});
-        setShoppingList(Object.entries(totals).filter(([_, info]) => info.amount > info.stock).map(([name, info]) => ({ name, display: `${info.amount - info.stock} ${info.unit} ${name}` })));
+
+        setShoppingList(Object.entries(totals).map(([name, info]) => ({
+            name,
+            display: `${info.amount} ${info.unit} ${name}`
+        })));
     }
+
+// 2. Add a specific item to the PERMANENT shopping list (Step 3 of your strategy)
+    async function addToPermanentList(itemName, amount) {
+        const { error } = await supabase
+            .from('shopping_list')
+            .insert([{ item_name: itemName, amount: amount, is_bought: false }]);
+
+        if (error) {
+            alert("Error adding item: " + error.message);
+        } else {
+            // Optional: show a small success toast or change the button icon
+            console.log(`${itemName} added to list!`);
+        }
+    }
+    // async function generateShoppingList() {
+    //     const recipeIds = [];
+    //     Object.values(plan).forEach(day => {
+    //         if (day?.main) recipeIds.push(day.main.id);
+    //         if (day?.side) recipeIds.push(day.side.id);
+    //         if (day?.veg) recipeIds.push(day.veg.id);
+    //     });
+    //     const { data, error } = await supabase.from('recipe_ingredients').select(`amount, ingredients:ingredient_id (name, unit, stock_quantity)`).in('recipe_id', recipeIds);
+    //     if (error) return;
+    //     const totals = data.reduce((acc, item) => {
+    //         if (!item.ingredients) return acc;
+    //         const name = item.ingredients.name;
+    //         if (!acc[name]) acc[name] = { amount: 0, unit: item.ingredients.unit || '', stock: item.ingredients.stock_quantity || 0 };
+    //         acc[name].amount += (item.amount || 0);
+    //         return acc;
+    //     }, {});
+    //     setShoppingList(Object.entries(totals).filter(([_, info]) => info.amount > info.stock).map(([name, info]) => ({ name, display: `${info.amount - info.stock} ${info.unit} ${name}` })));
+    // }
 
     const changeWeek = (days) => {
         const newSunday = new Date(currentSunday);
@@ -175,7 +221,50 @@ function MealPlan() {
             console.error("Error fetching goals:", error);
         }
     }
+    useEffect(() => {
+        if (recipes.length > 0) {
+            loadSavedPlan();
+            fetchPermanentList(); // Refresh the shopping list when the week changes
+        }
+    }, [weekDates, recipes]);
 
+    async function fetchPermanentList() {
+        // We only want items created between the Sunday and Saturday of the current view
+        const firstDay = weekDates[0];
+        const lastDay = weekDates[6];
+
+        const { data } = await supabase
+            .from('shopping_list')
+            .select('*')
+            .gte('created_at', firstDay) // Greater than or equal to Sunday
+            .lte('created_at', `${lastDay}T23:59:59`) // Less than or equal to Saturday night
+            .order('created_at', { ascending: false });
+
+        if (data) setPermanentList(data);
+    }
+
+
+    async function addToPermanentList(itemName, amount) {
+        // Force the item to be "born" on the Monday of the week you are viewing
+        // This ensures it stays attached to this specific week view
+        const targetDate = weekDates[1]; // Using Monday of the selected week
+
+        const { error } = await supabase
+            .from('shopping_list')
+            .insert([{
+                item_name: itemName,
+                amount: amount,
+                is_bought: false,
+                created_at: new Date(targetDate).toISOString()
+            }]);
+
+        if (!error) fetchPermanentList();
+    }
+
+    async function toggleBought(id, currentStatus) {
+        await supabase.from('shopping_list').update({ is_bought: !currentStatus }).eq('id', id);
+        fetchPermanentList();
+    }
     // --- 5. Render ---
     return (
         <div className="max-w-7xl mx-auto p-4 md:px-8 pb-8 bg-gray-50">
@@ -370,31 +459,108 @@ function MealPlan() {
                 </div>
             )}
 
-            {/* SHOPPING LIST - Compact and No-Gap */}
-            <div className="mt-8 flex flex-col items-center">
-                <button
-                    className="bg-gray-900 hover:bg-black text-white px-8 py-4 rounded-2xl font-black shadow-xl transition-all hover:-translate-y-1 active:scale-95 flex items-center gap-3"
-                    onClick={generateShoppingList}
-                >
-                    🛒 Generate Shopping List
-                </button>
+            {/* THE SHOPPING COMMAND CENTER */}
+            <div className="mt-12 border-t border-gray-200 pt-12">
+                {/* Header Row */}
+                <div className="mb-8 text-center md:text-left">
+                    <h3 className="text-2xl font-black text-gray-900 tracking-tight">🛒 Shopping Manager</h3>
+                    <p className="text-gray-500 font-medium">Review your week and build your final grocery list</p>
+                </div>
 
-                {shoppingList.length > 0 && (
-                    <div className="mt-6 w-full max-w-md bg-white p-6 rounded-3xl shadow-2xl border border-gray-100 text-left animate-in fade-in zoom-in-95 duration-300">
-                        <div className="flex justify-between items-center mb-4 border-b pb-2">
-                            <h3 className="text-lg font-black text-gray-900">Your Shopping List</h3>
-                            <button onClick={() => setShoppingList([])} className="text-xs font-bold text-gray-400 hover:text-red-500 uppercase">Clear ×</button>
-                        </div>
-                        <ul className="space-y-3">
+                <div className="flex flex-col md:flex-row gap-8 items-start">
+
+                    {/* LEFT COLUMN: Ingredient Review */}
+                    <div className="flex-1 w-full">
+                        <button
+                            className="w-full bg-white border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50 px-6 py-4 rounded-2xl font-black transition-all active:scale-95 mb-6 shadow-sm"
+                            onClick={getWeeklyIngredients}
+                        >
+                            🔍 1. Generate Review from Plan
+                        </button>
+
+                        <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                            {shoppingList.length === 0 && (
+                                <div className="text-center py-10 bg-white rounded-2xl border border-dashed border-gray-200 text-gray-400 font-medium italic">
+                                    Click the button above to see what you need...
+                                </div>
+                            )}
                             {shoppingList.map((item, index) => (
-                                <li key={index} className="flex items-center gap-3 text-gray-700 font-medium italic">
-                                    <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
-                                    {item.display}
-                                </li>
+                                <div key={index} className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm group hover:border-indigo-100 transition-all">
+                                    <span className="font-bold text-gray-700 capitalize leading-tight">{item.display}</span>
+                                    <button
+                                        onClick={() => addToPermanentList(item.name, item.display)}
+                                        className="bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white px-4 py-2 rounded-xl text-[10px] font-black transition-all active:scale-90 shadow-sm uppercase tracking-wider"
+                                    >
+                                        + Add
+                                    </button>
+                                </div>
                             ))}
-                        </ul>
+                        </div>
                     </div>
-                )}
+
+                    {/* RIGHT COLUMN: Final List (Matches Height & Light Theme) */}
+                    <div className="w-full md:w-96 bg-white rounded-3xl p-6 border border-gray-200 shadow-xl self-start sticky top-8">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-gray-900 font-black text-lg tracking-tight">📝 2. Final List</h3>
+                            <span className="bg-gray-100 text-gray-500 text-[10px] font-black px-2 py-1 rounded-lg uppercase">
+                    {permanentList.length} items
+                </span>
+                        </div>
+
+                        <div className="space-y-3">
+                            {permanentList.length === 0 ? (
+                                <p className="text-gray-400 text-xs italic font-medium py-12 text-center border-2 border-dashed border-gray-100 rounded-2xl">
+                                    Your list is empty. Add items from the left!
+                                </p>
+                            ) : (
+                                permanentList.map((item) => (
+                                    <div
+                                        key={item.id}
+                                        onClick={() => toggleBought(item.id, item.is_bought)}
+                                        className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer group 
+                                ${item.is_bought ? 'bg-gray-50 border-transparent' : 'bg-white border-gray-50 hover:border-indigo-100 shadow-sm'}`}
+                                    >
+                                        {/* Visual Checkbox */}
+                                        <div className={`mt-0.5 w-5 h-5 rounded-lg border-2 flex-shrink-0 flex items-center justify-center transition-all 
+                                ${item.is_bought ? 'bg-indigo-500 border-indigo-500 shadow-inner' : 'border-gray-300 group-hover:border-indigo-400'}`}>
+                                            {item.is_bought && (
+                                                <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7" />
+                                                </svg>
+                                            )}
+                                        </div>
+
+                                        {/* Text Content with Strikethrough */}
+                                        <div className="flex-1 min-w-0">
+                                            <p className={`text-sm font-bold leading-tight truncate transition-all 
+                                    ${item.is_bought ? 'text-gray-300 line-through decoration-indigo-300/50 decoration-2' : 'text-gray-700'}`}>
+                                                {item.item_name}
+                                            </p>
+                                            <p className={`text-[9px] font-black uppercase tracking-tight 
+                                    ${item.is_bought ? 'text-gray-200' : 'text-gray-400'}`}>
+                                                {item.amount}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        {permanentList.length > 0 && (
+                            <button
+                                onClick={async () => {
+                                    if(window.confirm("Delete all items?")) {
+                                        await supabase.from('shopping_list').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+                                        fetchPermanentList();
+                                    }
+                                }}
+                                className="w-full mt-8 py-3 text-[10px] font-black text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl uppercase tracking-widest transition-all border border-transparent hover:border-red-100"
+                            >
+                                Clear All Items
+                            </button>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );
