@@ -326,7 +326,6 @@ function MealPlan() {
                                 <div className="text-lg font-black text-gray-900">{new Date(dateStr + 'T00:00:00').getDate()}</div>
                             </div>
 
-                            {/* RESTORED KCAL DISPLAY */}
                             {showDailyNutrition && dayNutri && dayNutri.calories > 0 && (
                                 <div className="mb-3 p-2 bg-gray-50 rounded-lg border border-gray-100 text-center animate-in fade-in duration-200">
                                     <div className="text-[9px] uppercase font-bold text-gray-400">Per Serving</div>
@@ -334,28 +333,52 @@ function MealPlan() {
                                 </div>
                             )}
 
-                            {dayPlan ? (
+                            {dayPlan && dayPlan.main ? (
                                 <div className="space-y-3">
                                     <div className="p-3 bg-white rounded-xl border border-gray-100 shadow-sm">
                                         <div className="text-sm font-bold text-gray-800 leading-tight mb-1">{dayPlan.main?.name}</div>
 
-                                        {/* RESTORED LEFTOVERS LOGIC */}
-                                        {dayPlan.main && (
-                                            (() => {
-                                                const base = dayPlan.main.base_servings || 1;
-                                                const leftovers = base - globalPlannedServings;
-                                                return leftovers > 0 ? (
-                                                    <span className="inline-block bg-purple-100 text-purple-700 text-[10px] font-black px-2 py-0.5 rounded-md mt-1 animate-in zoom-in-50">
-                                                    +{leftovers} Leftovers
-                                                </span>
-                                                ) : null;
-                                            })()
-                                        )}
+                                        {/* LEFTOVERS LOGIC */}
+                                        {(() => {
+                                            const base = dayPlan.main.base_servings || 1;
+                                            const leftovers = base - globalPlannedServings;
+                                            return leftovers > 0 ? (
+                                                <span className="inline-block bg-purple-100 text-purple-700 text-[10px] font-black px-2 py-0.5 rounded-md mt-1">
+                                        +{leftovers} Leftovers
+                                    </span>
+                                            ) : null;
+                                        })()}
 
+                                        {/* DISPLAY SIDE/VEG IF THEY EXIST */}
                                         {dayPlan.side && <div className="text-[11px] text-gray-600 mt-2 truncate">🥗 {dayPlan.side.name}</div>}
                                         {dayPlan.veg && <div className="text-[11px] text-gray-600 mt-0.5 truncate">🥦 {dayPlan.veg.name}</div>}
+
+                                        {/* BUTTONS TO ADD SIDE/VEG IF THEY ARE MISSING */}
+                                        <div className="mt-3 pt-2 border-t border-gray-50 space-y-1">
+                                            {/* Only show these buttons if the main dish is NOT a full_meal */}
+                                            {dayPlan.main?.type !== 'full_meal' && (
+                                                <>
+                                                    {!dayPlan.side && (
+                                                        <button
+                                                            className="w-full text-[9px] font-bold py-1 bg-gray-50 text-gray-400 hover:bg-emerald-50 hover:text-emerald-600 rounded transition-colors"
+                                                            onClick={() => addComponentToDay(dateStr, 'side', 'side_dish')}
+                                                        >
+                                                            + Add Side
+                                                        </button>
+                                                    )}
+                                                    {!dayPlan.veg && (
+                                                        <button
+                                                            className="w-full text-[9px] font-bold py-1 bg-gray-50 text-gray-400 hover:bg-emerald-50 hover:text-emerald-600 rounded transition-colors"
+                                                            onClick={() => addComponentToDay(dateStr, 'veg', 'vegetable')}
+                                                        >
+                                                            + Add Veg
+                                                        </button>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
-                                    <button className="w-full text-[10px] font-bold text-red-400 hover:text-red-600 transition-colors" onClick={() => setPlan(prev => ({ ...prev, [dateStr]: null }))}>Remove</button>
+                                    <button className="w-full text-[10px] font-bold text-red-400 hover:text-red-600 transition-colors" onClick={() => setPlan(prev => ({ ...prev, [dateStr]: null }))}>Remove All</button>
                                 </div>
                             ) : (
                                 <div className="space-y-2">
@@ -363,8 +386,10 @@ function MealPlan() {
                                         const selected = recipes.find(r => r.id === e.target.value);
                                         setPlan(prev => ({ ...prev, [dateStr]: { main: selected } }));
                                     }}>
-                                        <option value="">Choose...</option>
-                                        {recipes.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                                        <option value="">Choose Main...</option>
+                                        {recipes.filter(r => r.type === 'main_dish' || r.type === 'full_meal').map(r => (
+                                            <option key={r.id} value={r.id}>{r.name}</option>
+                                        ))}
                                     </select>
                                     <button className="w-full text-[10px] font-bold py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg" onClick={() => setRandomForDay(dateStr)}>🎲 Random</button>
                                 </div>
