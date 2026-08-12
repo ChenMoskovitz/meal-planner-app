@@ -3,7 +3,7 @@ import { supabase } from '../../config/supabaseClient.js';
 import { getMultiRecipeNutrition } from '../../utils/nutritionHelper.js';
 
 function MealPlan() {
-    // --- 1. Helper Logic for Dates (Logic Unchanged) ---
+    // --- 1. Helper Logic for Dates ---
     const getSundayOfCurrentWeek = (d) => {
         const date = new Date(d);
         const day = date.getDay();
@@ -19,12 +19,13 @@ function MealPlan() {
         });
     };
 
-    // --- 2. States (Logic Unchanged) ---
+    // --- 2. States ---
     const [currentSunday, setCurrentSunday] = useState(getSundayOfCurrentWeek(new Date()));
     const [weekDates, setWeekDates] = useState(getWeekDaysFromSunday(currentSunday));
     const [plan, setPlan] = useState({});
     const [recipes, setRecipes] = useState([]);
     const [shoppingList, setShoppingList] = useState([]);
+    const [permanentList, setPermanentList] = useState([]);
     const [dailyNutrition, setDailyNutrition] = useState({});
     const todayStr = new Date().toISOString().split('T')[0];
     const [showDailyNutrition, setShowDailyNutrition] = useState(false);
@@ -33,15 +34,17 @@ function MealPlan() {
     const [nutritionalGoals, setNutritionalGoals] = useState(null);
     const [permanentList, setPermanentList] = useState([]);
 
-    // --- 3. Effects (Logic Unchanged) ---
+    // --- 3. Effects ---
     useEffect(() => {
         fetchRecipes();
         fetchUserGoals();
+        fetchPermanentList();
     }, []);
 
     useEffect(() => {
         if (recipes.length > 0) {
             loadSavedPlan();
+            fetchPermanentList();
         }
     }, [weekDates, recipes]);
 
@@ -51,7 +54,7 @@ function MealPlan() {
             for (const date of weekDates) {
                 const dayData = plan[date];
                 if (dayData) {
-                    const recipeIds = [dayData.main?.id, dayData.side?.id, dayData.veg?.id];
+                    const recipeIds = [dayData.main?.id, dayData.side?.id, dayData.veg?.id].filter(Boolean);
                     const totals = await getMultiRecipeNutrition(recipeIds);
                     newDailyTotals[date] = totals;
                 } else {
@@ -63,10 +66,15 @@ function MealPlan() {
         calculateAllDays();
     }, [plan, weekDates]);
 
-    // --- 4. Logic Functions (Logic Unchanged) ---
+    // --- 4. Logic Functions ---
     async function fetchRecipes() {
         const { data } = await supabase.from('recipes').select('*');
         if (data) setRecipes(data);
+    }
+
+    async function fetchUserGoals() {
+        const { data } = await supabase.from('user_goals').select('*').eq('user_label', 'default').single();
+        if (data) setNutritionalGoals(data);
     }
 
     async function loadSavedPlan() {
@@ -88,14 +96,6 @@ function MealPlan() {
         setPlan(prev => ({ ...prev, ...loadedPlan }));
     }
 
-    function setRandomForDay(day) {
-        const mains = recipes.filter(r => r.type === 'main_dish' || r.type === 'full_meal');
-        if (mains.length > 0) {
-            const random = mains[Math.floor(Math.random() * mains.length)];
-            setPlan(prev => ({ ...prev, [day]: { main: random } }));
-        }
-    }
-
     function addComponentToDay(day, typeKey, specificType) {
         const filtered = recipes.filter(r => r.type === specificType);
         if (filtered.length > 0) {
@@ -104,6 +104,14 @@ function MealPlan() {
                 ...prev,
                 [day]: { ...prev[day], [typeKey]: random }
             }));
+        }
+    }
+
+    function setRandomForDay(day) {
+        const mains = recipes.filter(r => r.type === 'main_dish' || r.type === 'full_meal');
+        if (mains.length > 0) {
+            const random = mains[Math.floor(Math.random() * mains.length)];
+            setPlan(prev => ({ ...prev, [day]: { main: random } }));
         }
     }
 
@@ -122,6 +130,20 @@ function MealPlan() {
             alert("Weekly Plan Saved! 🚀");
         } catch (error) { alert("Failed to save: " + error.message); }
     }
+
+    // --- SHOPPING LIST LOGIC ---
+    async function fetchPermanentList() {
+        const firstDay = weekDates[0];
+        const lastDay = weekDates[6];
+        const { data } = await supabase
+            .from('shopping_list')
+            .select('*')
+            .gte('created_at', firstDay)
+            .lte('created_at', `${lastDay}T23:59:59`)
+            .order('created_at', { ascending: false });
+        if (data) setPermanentList(data);
+    }
+
 // 1. Get all ingredients for the planned meals (Step 2 of your strategy)
     async function getWeeklyIngredients() {
         const recipeIds = [];
@@ -155,18 +177,22 @@ function MealPlan() {
         })));
     }
 
-// 2. Add a specific item to the PERMANENT shopping list (Step 3 of your strategy)
     async function addToPermanentList(itemName, amount) {
+        const targetDate = weekDates[1];
         const { error } = await supabase
             .from('shopping_list')
-            .insert([{ item_name: itemName, amount: amount, is_bought: false }]);
+            .insert([{
+                item_name: itemName,
+                amount: amount,
+                is_bought: false,
+                created_at: new Date(targetDate).toISOString()
+            }]);
+        if (!error) fetchPermanentList();
+    }
 
-        if (error) {
-            alert("Error adding item: " + error.message);
-        } else {
-            // Optional: show a small success toast or change the button icon
-            console.log(`${itemName} added to list!`);
-        }
+    async function toggleBought(id, currentStatus) {
+        await supabase.from('shopping_list').update({ is_bought: !currentStatus }).eq('id', id);
+        fetchPermanentList();
     }
     // async function generateShoppingList() {
     //     const recipeIds = [];
@@ -202,69 +228,12 @@ function MealPlan() {
     }), { calories: 0, protein: 0, fat: 0, fiber: 0 });
 
     const dailyAverage = {
-        calories: weeklyTotals.calories / 7,
-        protein: weeklyTotals.protein / 7,
-        fat: weeklyTotals.fat / 7,
-        fiber: weeklyTotals.fiber / 7,
+        calories: (weeklyTotals.calories / 7) || 0,
+        protein: (weeklyTotals.protein / 7) || 0,
+        fat: (weeklyTotals.fat / 7) || 0,
+        fiber: (weeklyTotals.fiber / 7) || 0,
     };
 
-    async function fetchUserGoals() {
-        const { data, error } = await supabase
-            .from('user_goals')
-            .select('*')
-            .eq('user_label', 'default')
-            .single();
-
-        if (data) {
-            setNutritionalGoals(data);
-        } else if (error) {
-            console.error("Error fetching goals:", error);
-        }
-    }
-    useEffect(() => {
-        if (recipes.length > 0) {
-            loadSavedPlan();
-            fetchPermanentList(); // Refresh the shopping list when the week changes
-        }
-    }, [weekDates, recipes]);
-
-    async function fetchPermanentList() {
-        // We only want items created between the Sunday and Saturday of the current view
-        const firstDay = weekDates[0];
-        const lastDay = weekDates[6];
-
-        const { data } = await supabase
-            .from('shopping_list')
-            .select('*')
-            .gte('created_at', firstDay) // Greater than or equal to Sunday
-            .lte('created_at', `${lastDay}T23:59:59`) // Less than or equal to Saturday night
-            .order('created_at', { ascending: false });
-
-        if (data) setPermanentList(data);
-    }
-
-
-    async function addToPermanentList(itemName, amount) {
-        // Force the item to be "born" on the Monday of the week you are viewing
-        // This ensures it stays attached to this specific week view
-        const targetDate = weekDates[1]; // Using Monday of the selected week
-
-        const { error } = await supabase
-            .from('shopping_list')
-            .insert([{
-                item_name: itemName,
-                amount: amount,
-                is_bought: false,
-                created_at: new Date(targetDate).toISOString()
-            }]);
-
-        if (!error) fetchPermanentList();
-    }
-
-    async function toggleBought(id, currentStatus) {
-        await supabase.from('shopping_list').update({ is_bought: !currentStatus }).eq('id', id);
-        fetchPermanentList();
-    }
     // --- 5. Render ---
     return (
         <div className="max-w-7xl mx-auto p-4 md:px-8 pb-8 bg-gray-50">
@@ -273,28 +242,16 @@ function MealPlan() {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <h2 className="text-2xl font-extrabold text-gray-900">📅 Weekly Dinner Plan</h2>
                     <div className="flex items-center gap-2">
-                        <button className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors" onClick={() => changeWeek(-7)}>⬅️ Prev</button>
+                        <button className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium" onClick={() => changeWeek(-7)}>⬅️ Prev</button>
                         <button className="px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-bold" onClick={() => setCurrentSunday(getSundayOfCurrentWeek(new Date()))}>Today</button>
-                        <button className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors" onClick={() => changeWeek(7)}>Next ➡️</button>
+                        <button className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium" onClick={() => changeWeek(7)}>Next ➡️</button>
                     </div>
                 </div>
 
                 <div className="flex flex-wrap gap-3 mt-6">
                     <button className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl font-bold shadow-md transition-all active:scale-95" onClick={saveWeeklyPlan}>💾 Save Plan</button>
-
-                    {/* FIXED TOGGLES */}
-                    <button
-                        className={`border px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${showDailyNutrition ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
-                        onClick={() => setShowDailyNutrition(!showDailyNutrition)}
-                    >
-                        {showDailyNutrition ? '📊 Hide kcal' : '📊 Show kcal'}
-                    </button>
-                    <button
-                        className={`border px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${showWeeklyStats ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
-                        onClick={() => setShowWeeklyStats(!showWeeklyStats)}
-                    >
-                        {showWeeklyStats ? '📈 Hide Stats' : '📈 Show Stats'}
-                    </button>
+                    <button className={`border px-4 py-2 rounded-xl text-sm font-semibold ${showDailyNutrition ? 'bg-indigo-600 text-white' : 'bg-white'}`} onClick={() => setShowDailyNutrition(!showDailyNutrition)}>📊 {showDailyNutrition ? 'Hide kcal' : 'Show kcal'}</button>
+                    <button className={`border px-4 py-2 rounded-xl text-sm font-semibold ${showWeeklyStats ? 'bg-indigo-600 text-white' : 'bg-white'}`} onClick={() => setShowWeeklyStats(!showWeeklyStats)}>📈 {showWeeklyStats ? 'Hide Stats' : 'Show Stats'}</button>
 
                     <div className="ml-auto flex items-center gap-2 bg-orange-50 px-4 py-2 rounded-xl border border-orange-100">
                         <label className="text-sm font-bold text-orange-800 uppercase tracking-tight">Planning for:</label>
@@ -319,17 +276,14 @@ function MealPlan() {
 
                     return (
                         <div key={dateStr} className={`relative p-3 rounded-xl border-2 transition-all ${isToday ? 'bg-blue-50 border-blue-200 ring-2 ring-blue-100' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
-                            {isToday && <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg uppercase tracking-widest">Today</span>}
-
                             <div className="text-center mb-3">
                                 <div className="text-[10px] font-bold text-gray-400 uppercase">{new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' })}</div>
                                 <div className="text-lg font-black text-gray-900">{new Date(dateStr + 'T00:00:00').getDate()}</div>
                             </div>
 
                             {showDailyNutrition && dayNutri && dayNutri.calories > 0 && (
-                                <div className="mb-3 p-2 bg-gray-50 rounded-lg border border-gray-100 text-center animate-in fade-in duration-200">
-                                    <div className="text-[9px] uppercase font-bold text-gray-400">Per Serving</div>
-                                    <div className="text-xs font-bold text-gray-700 flex items-center justify-center gap-1">🔥 {dayNutri.calories.toFixed(0)} kcal</div>
+                                <div className="mb-3 p-2 bg-gray-50 rounded-lg border border-gray-100 text-center">
+                                    <div className="text-xs font-bold text-gray-700 italic">🔥 {dayNutri.calories.toFixed(0)} kcal</div>
                                 </div>
                             )}
 
@@ -338,47 +292,40 @@ function MealPlan() {
                                     <div className="p-3 bg-white rounded-xl border border-gray-100 shadow-sm">
                                         <div className="text-sm font-bold text-gray-800 leading-tight mb-1">{dayPlan.main?.name}</div>
 
-                                        {/* LEFTOVERS LOGIC */}
+                                        {/* Leftovers Logic */}
                                         {(() => {
                                             const base = dayPlan.main.base_servings || 1;
                                             const leftovers = base - globalPlannedServings;
                                             return leftovers > 0 ? (
                                                 <span className="inline-block bg-purple-100 text-purple-700 text-[10px] font-black px-2 py-0.5 rounded-md mt-1">
-                                        +{leftovers} Leftovers
-                                    </span>
+                                                    +{leftovers} Leftovers
+                                                </span>
                                             ) : null;
                                         })()}
 
-                                        {/* DISPLAY SIDE/VEG IF THEY EXIST */}
                                         {dayPlan.side && <div className="text-[11px] text-gray-600 mt-2 truncate">🥗 {dayPlan.side.name}</div>}
                                         {dayPlan.veg && <div className="text-[11px] text-gray-600 mt-0.5 truncate">🥦 {dayPlan.veg.name}</div>}
 
-                                        {/* BUTTONS TO ADD SIDE/VEG IF THEY ARE MISSING */}
                                         <div className="mt-3 pt-2 border-t border-gray-50 space-y-1">
-                                            {/* Only show these buttons if the main dish is NOT a full_meal */}
                                             {dayPlan.main?.type !== 'full_meal' && (
                                                 <>
                                                     {!dayPlan.side && (
                                                         <button
                                                             className="w-full text-[9px] font-bold py-1 bg-gray-50 text-gray-400 hover:bg-emerald-50 hover:text-emerald-600 rounded transition-colors"
                                                             onClick={() => addComponentToDay(dateStr, 'side', 'side_dish')}
-                                                        >
-                                                            + Add Side
-                                                        </button>
+                                                        >+ Side</button>
                                                     )}
                                                     {!dayPlan.veg && (
                                                         <button
                                                             className="w-full text-[9px] font-bold py-1 bg-gray-50 text-gray-400 hover:bg-emerald-50 hover:text-emerald-600 rounded transition-colors"
                                                             onClick={() => addComponentToDay(dateStr, 'veg', 'vegetable')}
-                                                        >
-                                                            + Add Veg
-                                                        </button>
+                                                        >+ Veg</button>
                                                     )}
                                                 </>
                                             )}
                                         </div>
                                     </div>
-                                    <button className="w-full text-[10px] font-bold text-red-400 hover:text-red-600 transition-colors" onClick={() => setPlan(prev => ({ ...prev, [dateStr]: null }))}>Remove All</button>
+                                    <button className="w-full text-[10px] font-bold text-red-400" onClick={() => setPlan(prev => ({ ...prev, [dateStr]: null }))}>Remove All</button>
                                 </div>
                             ) : (
                                 <div className="space-y-2">
@@ -386,7 +333,7 @@ function MealPlan() {
                                         const selected = recipes.find(r => r.id === e.target.value);
                                         setPlan(prev => ({ ...prev, [dateStr]: { main: selected } }));
                                     }}>
-                                        <option value="">Choose Main...</option>
+                                        <option value="">Main...</option>
                                         {recipes.filter(r => r.type === 'main_dish' || r.type === 'full_meal').map(r => (
                                             <option key={r.id} value={r.id}>{r.name}</option>
                                         ))}
@@ -399,87 +346,61 @@ function MealPlan() {
                 })}
             </div>
 
-            {/* RESTORED WEEKLY STATS */}
+            {/* Weekly Goal Progress Bars */}
             {showWeeklyStats && nutritionalGoals && (
-                <div className="mt-8 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm animate-in slide-in-from-bottom-4 duration-300">
+                <div className="mt-8 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                     <h3 className="text-lg font-black text-gray-900 mb-4 tracking-tighter">Weekly Summary (Per Person)</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-
-                        {/* 1. Calories - Max Limit Logic */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Calories */}
                         <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                             <div className="flex justify-between items-start mb-1">
                                 <span className="text-[10px] font-bold text-gray-400 uppercase">Avg Calories</span>
                                 <span className="text-[10px] font-black text-black bg-gray-200 px-1.5 py-0.5 rounded">Goal: {nutritionalGoals.target_calories}</span>
                             </div>
                             <div className={`text-xl font-black ${dailyAverage.calories > nutritionalGoals.target_calories ? 'text-red-500' : 'text-emerald-600'}`}>
-                                {dailyAverage.calories > nutritionalGoals.target_calories ? '⚠️' : '✅'} {dailyAverage.calories.toFixed(0)}
+                                {dailyAverage.calories.toFixed(0)}
                             </div>
-
-                            {/* Progress Bar for Calories */}
                             <div className="w-full h-2 bg-gray-200 rounded-full mt-2 overflow-hidden shadow-inner">
                                 <div
-                                    className={`h-full transition-all duration-700 ease-out ${dailyAverage.calories > nutritionalGoals.target_calories ? 'bg-red-500' : 'bg-emerald-500'}`}
+                                    className={`h-full transition-all duration-700 ${dailyAverage.calories > nutritionalGoals.target_calories ? 'bg-red-500' : 'bg-emerald-500'}`}
                                     style={{ width: `${Math.min((dailyAverage.calories / nutritionalGoals.target_calories) * 100, 100)}%` }}
                                 ></div>
                             </div>
-
-                            <p className="text-[9px] mt-2 font-medium text-gray-500 italic">
-                                {dailyAverage.calories > nutritionalGoals.target_calories
-                                    ? `Over daily limit by ${(dailyAverage.calories - nutritionalGoals.target_calories).toFixed(0)} kcal`
-                                    : "Under daily calorie limit"}
-                            </p>
                         </div>
 
-                        {/* 2. Protein - Minimum Target Logic */}
+                        {/* Protein */}
                         <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                             <div className="flex justify-between items-start mb-1">
                                 <span className="text-[10px] font-bold text-gray-400 uppercase">Avg Protein</span>
                                 <span className="text-[10px] font-black text-black bg-gray-200 px-1.5 py-0.5 rounded">Goal: {nutritionalGoals.min_protein}g</span>
                             </div>
                             <div className={`text-xl font-black ${dailyAverage.protein >= nutritionalGoals.min_protein ? 'text-emerald-600' : 'text-orange-500'}`}>
-                                {dailyAverage.protein >= nutritionalGoals.min_protein ? '✅' : '💪'} {dailyAverage.protein.toFixed(1)}g
+                                {dailyAverage.protein.toFixed(1)}g
                             </div>
-
-                            {/* Progress Bar for Protein */}
                             <div className="w-full h-2 bg-gray-200 rounded-full mt-2 overflow-hidden shadow-inner">
                                 <div
-                                    className={`h-full transition-all duration-700 ease-out ${dailyAverage.protein >= nutritionalGoals.min_protein ? 'bg-emerald-500' : 'bg-orange-500'}`}
+                                    className={`h-full transition-all duration-700 ${dailyAverage.protein >= nutritionalGoals.min_protein ? 'bg-emerald-500' : 'bg-orange-500'}`}
                                     style={{ width: `${Math.min((dailyAverage.protein / nutritionalGoals.min_protein) * 100, 100)}%` }}
                                 ></div>
                             </div>
-
-                            <p className="text-[9px] mt-2 font-medium text-gray-500 italic">
-                                {dailyAverage.protein >= nutritionalGoals.min_protein
-                                    ? "Protein goal reached!"
-                                    : `Need ${(nutritionalGoals.min_protein - dailyAverage.protein).toFixed(1)}g more daily`}
-                            </p>
                         </div>
 
-                        {/* 3. Fiber - Minimum Target Logic */}
+                        {/* Fiber */}
                         <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                             <div className="flex justify-between items-start mb-1">
                                 <span className="text-[10px] font-bold text-gray-400 uppercase">Avg Fiber</span>
                                 <span className="text-[10px] font-black text-black bg-gray-200 px-1.5 py-0.5 rounded">Goal: {nutritionalGoals.min_fiber}g</span>
                             </div>
                             <div className={`text-xl font-black ${dailyAverage.fiber >= nutritionalGoals.min_fiber ? 'text-emerald-600' : 'text-orange-500'}`}>
-                                {dailyAverage.fiber >= nutritionalGoals.min_fiber ? '✅' : '🍞'} {dailyAverage.fiber.toFixed(1)}g
+                                {dailyAverage.fiber.toFixed(1)}g
                             </div>
-
-                            {/* Progress Bar for Fiber */}
                             <div className="w-full h-2 bg-gray-200 rounded-full mt-2 overflow-hidden shadow-inner">
                                 <div
-                                    className={`h-full transition-all duration-700 ease-out ${dailyAverage.fiber >= nutritionalGoals.min_fiber ? 'bg-emerald-500' : 'bg-orange-500'}`}
+                                    className={`h-full transition-all duration-700 ${dailyAverage.fiber >= nutritionalGoals.min_fiber ? 'bg-emerald-500' : 'bg-orange-500'}`}
                                     style={{ width: `${Math.min((dailyAverage.fiber / nutritionalGoals.min_fiber) * 100, 100)}%` }}
                                 ></div>
                             </div>
-
-                            <p className="text-[9px] mt-2 font-medium text-gray-500 italic">
-                                {dailyAverage.fiber >= nutritionalGoals.min_fiber
-                                    ? "Fiber goal reached!"
-                                    : `Need ${(nutritionalGoals.min_fiber - dailyAverage.fiber).toFixed(1)}g more daily`}
-                            </p>
                         </div>
-
                     </div>
                 </div>
             )}
