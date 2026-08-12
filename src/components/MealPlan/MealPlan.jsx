@@ -32,6 +32,7 @@ function MealPlan() {
     const [showWeeklyStats, setShowWeeklyStats] = useState(false);
     const [globalPlannedServings, setGlobalPlannedServings] = useState(2);
     const [nutritionalGoals, setNutritionalGoals] = useState(null);
+    const [permanentList, setPermanentList] = useState([]);
 
     // --- 3. Effects ---
     useEffect(() => {
@@ -143,6 +144,7 @@ function MealPlan() {
         if (data) setPermanentList(data);
     }
 
+// 1. Get all ingredients for the planned meals (Step 2 of your strategy)
     async function getWeeklyIngredients() {
         const recipeIds = [];
         Object.values(plan).forEach(day => {
@@ -158,8 +160,9 @@ function MealPlan() {
             .select(`amount, ingredients:ingredient_id (name, unit)`)
             .in('recipe_id', recipeIds);
 
-        if (error) return;
+        if (error) return console.error(error);
 
+        // Group ingredients so "Onion" doesn't appear 5 times
         const totals = data.reduce((acc, item) => {
             if (!item.ingredients) return acc;
             const name = item.ingredients.name;
@@ -191,6 +194,24 @@ function MealPlan() {
         await supabase.from('shopping_list').update({ is_bought: !currentStatus }).eq('id', id);
         fetchPermanentList();
     }
+    // async function generateShoppingList() {
+    //     const recipeIds = [];
+    //     Object.values(plan).forEach(day => {
+    //         if (day?.main) recipeIds.push(day.main.id);
+    //         if (day?.side) recipeIds.push(day.side.id);
+    //         if (day?.veg) recipeIds.push(day.veg.id);
+    //     });
+    //     const { data, error } = await supabase.from('recipe_ingredients').select(`amount, ingredients:ingredient_id (name, unit, stock_quantity)`).in('recipe_id', recipeIds);
+    //     if (error) return;
+    //     const totals = data.reduce((acc, item) => {
+    //         if (!item.ingredients) return acc;
+    //         const name = item.ingredients.name;
+    //         if (!acc[name]) acc[name] = { amount: 0, unit: item.ingredients.unit || '', stock: item.ingredients.stock_quantity || 0 };
+    //         acc[name].amount += (item.amount || 0);
+    //         return acc;
+    //     }, {});
+    //     setShoppingList(Object.entries(totals).filter(([_, info]) => info.amount > info.stock).map(([name, info]) => ({ name, display: `${info.amount - info.stock} ${info.unit} ${name}` })));
+    // }
 
     const changeWeek = (days) => {
         const newSunday = new Date(currentSunday);
@@ -384,49 +405,103 @@ function MealPlan() {
                 </div>
             )}
 
-            {/* SHOPPING MANAGER */}
+            {/* THE SHOPPING COMMAND CENTER */}
             <div className="mt-12 border-t border-gray-200 pt-12">
+                {/* Header Row */}
                 <div className="mb-8 text-center md:text-left">
                     <h3 className="text-2xl font-black text-gray-900 tracking-tight">🛒 Shopping Manager</h3>
-                    <p className="text-gray-500 font-medium">Review your week and build your grocery list</p>
+                    <p className="text-gray-500 font-medium">Review your week and build your final grocery list</p>
                 </div>
+
                 <div className="flex flex-col md:flex-row gap-8 items-start">
+
+                    {/* LEFT COLUMN: Ingredient Review */}
                     <div className="flex-1 w-full">
-                        <button className="w-full bg-white border-2 border-indigo-600 text-indigo-600 px-6 py-4 rounded-2xl font-black transition-all mb-6 shadow-sm" onClick={getWeeklyIngredients}>🔍 1. Generate Review</button>
+                        <button
+                            className="w-full bg-white border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50 px-6 py-4 rounded-2xl font-black transition-all active:scale-95 mb-6 shadow-sm"
+                            onClick={getWeeklyIngredients}
+                        >
+                            🔍 1. Generate Review from Plan
+                        </button>
+
                         <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                            {shoppingList.length === 0 && (
+                                <div className="text-center py-10 bg-white rounded-2xl border border-dashed border-gray-200 text-gray-400 font-medium italic">
+                                    Click the button above to see what you need...
+                                </div>
+                            )}
                             {shoppingList.map((item, index) => (
-                                <div key={index} className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                                <div key={index} className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm group hover:border-indigo-100 transition-all">
                                     <span className="font-bold text-gray-700 capitalize leading-tight">{item.display}</span>
-                                    <button onClick={() => addToPermanentList(item.name, item.display)} className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase">+ Add</button>
+                                    <button
+                                        onClick={() => addToPermanentList(item.name, item.display)}
+                                        className="bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white px-4 py-2 rounded-xl text-[10px] font-black transition-all active:scale-90 shadow-sm uppercase tracking-wider"
+                                    >
+                                        + Add
+                                    </button>
                                 </div>
                             ))}
                         </div>
                     </div>
+
+                    {/* RIGHT COLUMN: Final List (Matches Height & Light Theme) */}
                     <div className="w-full md:w-96 bg-white rounded-3xl p-6 border border-gray-200 shadow-xl self-start sticky top-8">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-gray-900 font-black text-lg tracking-tight">📝 2. Final List</h3>
-                            <span className="bg-gray-100 text-gray-500 text-[10px] font-black px-2 py-1 rounded-lg uppercase">{permanentList.length} items</span>
+                            <span className="bg-gray-100 text-gray-500 text-[10px] font-black px-2 py-1 rounded-lg uppercase">
+                    {permanentList.length} items
+                </span>
                         </div>
+
                         <div className="space-y-3">
-                            {permanentList.map((item) => (
-                                <div key={item.id} onClick={() => toggleBought(item.id, item.is_bought)} className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer ${item.is_bought ? 'bg-gray-50 border-transparent' : 'bg-white border-gray-50'}`}>
-                                    <div className={`mt-0.5 w-5 h-5 rounded-lg border-2 flex items-center justify-center ${item.is_bought ? 'bg-indigo-500 border-indigo-500' : 'border-gray-300'}`}>
-                                        {item.is_bought && <span className="text-white text-[10px]">✓</span>}
+                            {permanentList.length === 0 ? (
+                                <p className="text-gray-400 text-xs italic font-medium py-12 text-center border-2 border-dashed border-gray-100 rounded-2xl">
+                                    Your list is empty. Add items from the left!
+                                </p>
+                            ) : (
+                                permanentList.map((item) => (
+                                    <div
+                                        key={item.id}
+                                        onClick={() => toggleBought(item.id, item.is_bought)}
+                                        className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer group 
+                                ${item.is_bought ? 'bg-gray-50 border-transparent' : 'bg-white border-gray-50 hover:border-indigo-100 shadow-sm'}`}
+                                    >
+                                        {/* Visual Checkbox */}
+                                        <div className={`mt-0.5 w-5 h-5 rounded-lg border-2 flex-shrink-0 flex items-center justify-center transition-all 
+                                ${item.is_bought ? 'bg-indigo-500 border-indigo-500 shadow-inner' : 'border-gray-300 group-hover:border-indigo-400'}`}>
+                                            {item.is_bought && (
+                                                <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7" />
+                                                </svg>
+                                            )}
+                                        </div>
+
+                                        {/* Text Content with Strikethrough */}
+                                        <div className="flex-1 min-w-0">
+                                            <p className={`text-sm font-bold leading-tight truncate transition-all 
+                                    ${item.is_bought ? 'text-gray-300 line-through decoration-indigo-300/50 decoration-2' : 'text-gray-700'}`}>
+                                                {item.item_name}
+                                            </p>
+                                            <p className={`text-[9px] font-black uppercase tracking-tight 
+                                    ${item.is_bought ? 'text-gray-200' : 'text-gray-400'}`}>
+                                                {item.amount}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className={`text-sm font-bold truncate ${item.is_bought ? 'text-gray-300 line-through decoration-indigo-300/50' : 'text-gray-700'}`}>{item.item_name}</p>
-                                        <p className={`text-[9px] font-black uppercase ${item.is_bought ? 'text-gray-200' : 'text-gray-400'}`}>{item.amount}</p>
-                                    </div>
-                                </div>
-                            ))}
+                                ))
+                            )}
                         </div>
+
                         {permanentList.length > 0 && (
-                            <button onClick={async () => {
-                                if(window.confirm("Delete all items?")) {
-                                    await supabase.from('shopping_list').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-                                    fetchPermanentList();
-                                }
-                            }} className="w-full mt-8 py-3 text-[10px] font-black text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl uppercase tracking-widest">
+                            <button
+                                onClick={async () => {
+                                    if(window.confirm("Delete all items?")) {
+                                        await supabase.from('shopping_list').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+                                        fetchPermanentList();
+                                    }
+                                }}
+                                className="w-full mt-8 py-3 text-[10px] font-black text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl uppercase tracking-widest transition-all border border-transparent hover:border-red-100"
+                            >
                                 Clear All Items
                             </button>
                         )}
