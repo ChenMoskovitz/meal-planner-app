@@ -32,7 +32,6 @@ function MealPlan() {
     const [showWeeklyStats, setShowWeeklyStats] = useState(false);
     const [globalPlannedServings, setGlobalPlannedServings] = useState(2);
     const [nutritionalGoals, setNutritionalGoals] = useState(null);
-    const [permanentList, setPermanentList] = useState([]);
 
     // --- 3. Effects ---
     useEffect(() => {
