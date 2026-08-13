@@ -15,17 +15,61 @@ function UserGoals() {
         fetchGoals();
     }, []);
 
+    async function getCurrentUser() {
+        const {
+            data: { user }
+        } = await supabase.auth.getUser();
+
+        return user;
+    }
+
     async function fetchGoals() {
-        const { data } = await supabase.from('user_goals').select('*').eq('user_label', 'default').single();
-        if (data) setGoals(data);
+        const user = await getCurrentUser();
+        if (!user) return;
+
+        const { data, error } = await supabase
+            .from('user_goals')
+            .select('*')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+        if (error) {
+            console.error("Error fetching goals:", error);
+            return;
+        }
+
+        if (data) {
+            setGoals(data);
+        }
     }
 
     async function saveGoals() {
         setLoading(true);
+        const user = await getCurrentUser();
+
+        if (!user) {
+            console.error("No authenticated user");
+            setLoading(false);
+            return;
+        }
+
         const { error } = await supabase
             .from('user_goals')
-            .upsert({ user_label: 'default', ...goals }, { onConflict: 'user_label' });
-
+            .upsert(
+                {
+                    user_id: user.id,
+                    target_calories: goals.target_calories,
+                    min_protein: goals.min_protein,
+                    min_fiber: goals.min_fiber,
+                    max_fat: goals.max_fat
+                },
+                {
+                    onConflict: 'user_id'
+                }
+            );
+        if (error) {
+            console.error("Error saving goals:", error);
+        }
         if (!error) {
             setMessage('Goals updated successfully! 🚀');
             setTimeout(() => setMessage(''), 3000);
@@ -43,6 +87,7 @@ function UserGoals() {
                 <div>
                     <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Max Calories</label>
                     <input
+                        aria-label="Max Calories"
                         type="number"
                         className="w-full p-2 border border-gray-200 rounded-xl font-bold"
                         value={goals.target_calories}
@@ -52,6 +97,7 @@ function UserGoals() {
                 <div>
                     <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Min Protein (g)</label>
                     <input
+                        aria-label="Min Protein"
                         type="number"
                         className="w-full p-2 border border-gray-200 rounded-xl font-bold"
                         value={goals.min_protein}
@@ -61,6 +107,7 @@ function UserGoals() {
                 <div>
                     <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Min Fiber (g)</label>
                     <input
+                        aria-label="Min Fiber"
                         type="number"
                         className="w-full p-2 border border-gray-200 rounded-xl font-bold"
                         value={goals.min_fiber}
@@ -70,6 +117,7 @@ function UserGoals() {
                 <div>
                     <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Max Fat (g)</label>
                     <input
+                        aria-label="Max Fat"
                         type="number"
                         className="w-full p-2 border border-gray-200 rounded-xl font-bold"
                         value={goals.max_fat}
