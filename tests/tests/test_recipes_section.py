@@ -60,6 +60,7 @@ def test_add_cooking_instructions(page: Page, signed_up_user):
     ).to_have_value(instructions)
 
 def test_save_recipe_changes(page: Page, signed_up_user):
+    page.on("console", lambda msg: print("BROWSER:", msg.type, msg.text))
     recipe_name = f"Recipe {int(time.time())}"
     instructions = "Boil water. Add pasta. Cook for 10 minutes."
 
@@ -71,10 +72,23 @@ def test_save_recipe_changes(page: Page, signed_up_user):
     page.get_by_text(recipe_name).click()
 
     # Enter instructions
-    page.get_by_placeholder("Write your recipe steps here...").fill(instructions)
+    page.get_by_placeholder(
+        "Write your recipe steps here..."
+    ).fill(instructions)
 
-    # Save
-    page.get_by_role("button", name="Save Changes").click()
+    # Save and wait until the DB update finished
+    with page.expect_event("dialog") as dialog_info:
+        page.get_by_role("button", name="Save Changes").click()
+
+    dialog = dialog_info.value
+    assert dialog.message == "Updated!"
+    dialog.accept()
+
+    # Close the recipe
+    page.get_by_role("button", name="Close selected recipe").click()
+
+    # Reload so recipes are fetched again from the DB
+    page.reload()
 
     # Re-select the recipe
     page.get_by_text(recipe_name).click()

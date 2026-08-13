@@ -138,11 +138,23 @@ function Recipes() {
 
     async function updateRecipe() {
         if (!selectedRecipe) return;
+
         const { error } = await supabase
             .from('recipes')
-            .update({ description, type, base_servings: baseServings })
+            .update({
+                description,
+                type: type || null,
+                base_servings: baseServings
+            })
             .eq('id', selectedRecipe.id);
-        if (!error) { alert("Updated!"); fetchRecipes(); }
+
+        if (error) {
+            console.error("Error updating recipe:", error);
+            return;
+        }
+
+        alert("Updated!");
+        fetchRecipes();
     }
 
     async function deleteRecipe(recipeId) {
@@ -290,6 +302,7 @@ function Recipes() {
                                             </button>
 
                                             <button
+                                                aria-label="Close selected recipe"
                                                 onClick={() => setSelectedRecipe(null)}
                                                 className="text-xs font-bold bg-gray-100 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
                                             >
