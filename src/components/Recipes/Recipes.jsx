@@ -18,6 +18,7 @@ function Recipes() {
     const [isVisible, setIsVisible] = useState(true);
     const [errors, setErrors] = useState({ name: false, amount: false });
     const [lastSelectedFood, setLastSelectedFood] = useState(null);
+    const [newRecipeType, setNewRecipeType] = useState('');
 
     const RECIPE_TYPES = [
         { value: 'full_meal', label: 'Full Meal' },
@@ -123,8 +124,8 @@ function Recipes() {
 
     async function addRecipe() {
         if (title === '') return;
-        const {error} = await supabase.from('recipes').insert([{ name: title }]);
-        if (!error) { setTitle(''); fetchRecipes(); }
+        const {error} = await supabase.from('recipes').insert([{ name: title, type: newRecipeType || null }]);
+        if (!error) { setTitle(''); setNewRecipeType(''); fetchRecipes(); }
     }
 
     async function removeIngredientFromRecipe(ingredientId) {
@@ -264,6 +265,17 @@ function Recipes() {
                             onChange={(e) => setTitle(e.target.value)}
                             placeholder="Recipe Title (e.g. Pasta)"
                         />
+                        <select
+                            aria-label="New Recipe Type"
+                            className="px-4 py-2 border border-gray-300 rounded-lg outline-none focus:border-indigo-500 transition-colors bg-white text-gray-700"
+                            value={newRecipeType}
+                            onChange={(e) => setNewRecipeType(e.target.value)}
+                        >
+                            <option value="">Type (optional)</option>
+                            {RECIPE_TYPES.map(t => (
+                                <option key={t.value} value={t.value}>{t.label}</option>
+                            ))}
+                        </select>
                         <button className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg transition-all active:scale-95" onClick={addRecipe}>
                             Create Recipe
                         </button>
@@ -384,6 +396,25 @@ function Recipes() {
                                                     </div>
                                                 ))}
                                             </div>
+                                        </div>
+
+                                        {/* Recipe Type */}
+                                        <div>
+                                            <label
+                                                htmlFor="recipe-type"
+                                                className="block text-sm font-black text-gray-400 uppercase mb-2 tracking-tighter"
+                                            >Recipe Type</label>
+                                            <select
+                                                id="recipe-type"
+                                                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-indigo-400 transition-colors shadow-inner"
+                                                value={type}
+                                                onChange={(e) => setType(e.target.value)}
+                                            >
+                                                <option value="">No type set</option>
+                                                {RECIPE_TYPES.map(t => (
+                                                    <option key={t.value} value={t.value}>{t.label}</option>
+                                                ))}
+                                            </select>
                                         </div>
 
                                         {/* Instructions Section */}
