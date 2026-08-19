@@ -311,13 +311,13 @@ function MealPlan() {
                                                     {!dayPlan.side && (
                                                         <button
                                                             className="w-full text-[9px] font-bold py-1 bg-gray-50 text-gray-400 hover:bg-emerald-50 hover:text-emerald-600 rounded transition-colors"
-                                                            onClick={() => addComponentToDay(dateStr, 'side', 'side_dish')}
+                                                            onClick={() => addComponentToDay(dateStr, 'side', 'side')}
                                                         >+ Side</button>
                                                     )}
                                                     {!dayPlan.veg && (
                                                         <button
                                                             className="w-full text-[9px] font-bold py-1 bg-gray-50 text-gray-400 hover:bg-emerald-50 hover:text-emerald-600 rounded transition-colors"
-                                                            onClick={() => addComponentToDay(dateStr, 'veg', 'vegetable')}
+                                                            onClick={() => addComponentToDay(dateStr, 'veg', 'vegetable_side')}
                                                         >+ Veg</button>
                                                     )}
                                                 </>
