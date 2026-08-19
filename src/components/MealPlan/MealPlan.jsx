@@ -72,7 +72,15 @@ function MealPlan() {
     }
 
     async function fetchUserGoals() {
-        const { data } = await supabase.from('user_goals').select('*').eq('user_label', 'default').single();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data } = await supabase
+            .from('user_goals')
+            .select('*')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
         if (data) setNutritionalGoals(data);
     }
 
