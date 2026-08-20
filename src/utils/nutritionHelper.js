@@ -1,8 +1,12 @@
 import { supabase } from '../config/supabaseClient';
 
 /**
- * 1. PANTRY LOGIC
- * Formats raw API data from Edamam into "per 1 unit" values.
+ * 1. DISPLAY HELPER
+ * Converts Edamam's per-100g figures into "per 1 unit" values for display.
+ *
+ * NOTE: this is not the storage scale. The ingredients.*_per_unit columns
+ * hold Edamam's raw per-100g values, and getRecipeNutrition below divides
+ * by 100 when reading them. Do not persist the output of this function.
  */
 export const formatIngredientNutrition = (apiData) => {
     if (!apiData) return null;
