@@ -197,7 +197,8 @@ function Recipes() {
                     stock_quantity: 0,
                     calories_per_unit: food.nutrients?.ENERC_KCAL || 0,
                     protein_per_unit: food.nutrients?.PROCNT || 0,
-                    fat_per_unit: food.nutrients?.FAT || 0
+                    fat_per_unit: food.nutrients?.FAT || 0,
+                    fiber_per_unit: food.nutrients?.FIBTG || 0
                 }])
                 .select()
                 .single();
