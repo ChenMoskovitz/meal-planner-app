@@ -169,7 +169,7 @@ function MealPlan() {
 
         const { data, error } = await supabase
             .from('recipe_ingredients')
-            .select(`amount, ingredients:ingredient_id (name, unit)`)
+            .select(`amount, ingredients:ingredient_id (name, unit_type)`)
             .in('recipe_id', recipeIds);
 
         if (error) return console.error(error);
@@ -178,14 +178,14 @@ function MealPlan() {
         const totals = data.reduce((acc, item) => {
             if (!item.ingredients) return acc;
             const name = item.ingredients.name;
-            if (!acc[name]) acc[name] = { amount: 0, unit: item.ingredients.unit || '' };
+            if (!acc[name]) acc[name] = { amount: 0, unit: item.ingredients.unit_type || '' };
             acc[name].amount += (item.amount || 0);
             return acc;
         }, {});
 
         setShoppingList(Object.entries(totals).map(([name, info]) => ({
             name,
-            display: `${info.amount} ${info.unit} ${name}`
+            display: `${info.amount}${info.unit} ${name}`
         })));
     }
 
