@@ -417,6 +417,25 @@ function Recipes() {
                                             </select>
                                         </div>
 
+                                        {/* Base Servings */}
+                                        <div>
+                                            <label
+                                                htmlFor="base-servings"
+                                                className="block text-sm font-black text-gray-400 uppercase mb-2 tracking-tighter"
+                                            >Servings This Recipe Makes</label>
+                                            <input
+                                                id="base-servings"
+                                                type="number"
+                                                min="1"
+                                                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-indigo-400 transition-colors shadow-inner"
+                                                value={baseServings}
+                                                onChange={(e) => setBaseServings(Number(e.target.value) || 1)}
+                                            />
+                                            <p className="text-[10px] font-bold text-gray-400 mt-1 ml-1">
+                                                Used to calculate nutrition per portion and leftovers.
+                                            </p>
+                                        </div>
+
                                         {/* Instructions Section */}
                                         <div>
                                             <label className="block text-sm font-black text-gray-400 uppercase mb-2 tracking-tighter">Cooking Instructions</label>
