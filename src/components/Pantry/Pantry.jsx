@@ -52,20 +52,25 @@ function Pantry() {
     const handleFetchNutrition = async (item) => {
         const foodData = await fetchNutrition(item.name);
         if (foodData && foodData.nutrients) {
-            const nutrients = formatIngredientNutrition(foodData.nutrients);
+            const apiNutrients = foodData.nutrients;
+
+            // The *_per_unit columns hold Edamam's raw per-100g values.
+            // getRecipeNutrition divides by 100 when it reads them.
             const { error } = await supabase
                 .from('ingredients')
                 .update({
-                    calories_per_unit: nutrients.calories,
+                    calories_per_unit: apiNutrients.ENERC_KCAL || 0,
                     unit_type: unitType,
-                    protein_per_unit: nutrients.protein,
-                    fat_per_unit: nutrients.fat,
-                    fiber_per_unit: nutrients.fiber
+                    protein_per_unit: apiNutrients.PROCNT || 0,
+                    fat_per_unit: apiNutrients.FAT || 0,
+                    fiber_per_unit: apiNutrients.FIBTG || 0
                 })
                 .eq('id', item.id);
 
             if (!error) {
-                alert(`Updated! 1${unitType} of ${item.name} is ${nutrients.calories.toFixed(4)} kcal.`);
+                // Display only: the alert reports a single unit, not the stored scale.
+                const perUnit = formatIngredientNutrition(apiNutrients);
+                alert(`Updated! 1${unitType} of ${item.name} is ${perUnit.calories.toFixed(4)} kcal.`);
                 fetchIngredients();
             }
         }
