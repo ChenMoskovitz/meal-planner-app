@@ -91,6 +91,11 @@ function MealPlan() {
             .in('day_of_week', weekDates);
 
         if (loadError) return console.error(loadError);
+
+        if (planData.length > 0 && planData[0].planned_servings) {
+            setGlobalPlannedServings(planData[0].planned_servings);
+        }
+
         const loadedPlan = {};
         planData.forEach(row => {
             const day = row.day_of_week;
@@ -128,9 +133,9 @@ function MealPlan() {
             for (const day of weekDates) {
                 const dayData = plan[day];
                 if (!dayData) continue;
-                if (dayData.main) rowsToInsert.push({ day_of_week: day, recipe_id: dayData.main.id, slot_type: 'main' });
-                if (dayData.side) rowsToInsert.push({ day_of_week: day, recipe_id: dayData.side.id, slot_type: 'side' });
-                if (dayData.veg) rowsToInsert.push({ day_of_week: day, recipe_id: dayData.veg.id, slot_type: 'veg' });
+                if (dayData.main) rowsToInsert.push({ day_of_week: day, recipe_id: dayData.main.id, slot_type: 'main', planned_servings: globalPlannedServings });
+                if (dayData.side) rowsToInsert.push({ day_of_week: day, recipe_id: dayData.side.id, slot_type: 'side', planned_servings: globalPlannedServings });
+                if (dayData.veg) rowsToInsert.push({ day_of_week: day, recipe_id: dayData.veg.id, slot_type: 'veg', planned_servings: globalPlannedServings });
             }
             await supabase.from('plan_recipes').delete().in('day_of_week', weekDates);
             await supabase.from('plan_recipes').insert(rowsToInsert);
