@@ -97,6 +97,8 @@ function Recipes() {
         if (!error) {
             fetchRecipeIngredients(selectedRecipe.id);
             setAmount(1);
+            // Keep an open nutrition box in step with the new ingredient list.
+            if (selectedNutrition) calculateRecipeNutrition(selectedRecipe.id);
         }
     }
 
@@ -112,7 +114,10 @@ function Recipes() {
             .delete()
             .eq('recipe_id', selectedRecipe.id)
             .eq('ingredient_id', ingredientId);
-        if (!error) fetchRecipeIngredients(selectedRecipe.id);
+        if (!error) {
+            fetchRecipeIngredients(selectedRecipe.id);
+            if (selectedNutrition) calculateRecipeNutrition(selectedRecipe.id);
+        }
     }
 
     async function updateRecipe() {
@@ -308,6 +313,8 @@ function Recipes() {
                                             <div className="grid grid-cols-2 gap-4">
                                                 <p className="text-lg font-bold italic">🔥 <strong>{selectedNutrition.calories.toFixed(0)}</strong> <span className="text-xs font-normal">kcal</span></p>
                                                 <p className="text-lg font-bold italic">💪 <strong>{selectedNutrition.protein.toFixed(1)}</strong> <span className="text-xs font-normal">g Protein</span></p>
+                                                <p className="text-lg font-bold italic">🥑 <strong>{selectedNutrition.fat.toFixed(1)}</strong> <span className="text-xs font-normal">g Fat</span></p>
+                                                <p className="text-lg font-bold italic">🌾 <strong>{selectedNutrition.fiber.toFixed(1)}</strong> <span className="text-xs font-normal">g Fiber</span></p>
                                             </div>
                                             <button className="absolute top-4 right-4 text-xs opacity-50 hover:opacity-100" onClick={() => setSelectedNutrition(null)}>✕</button>
                                         </div>
