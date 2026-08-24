@@ -21,6 +21,7 @@ function Recipes() {
     const [ingredientsError, setIngredientsError] = useState(null);
     const [editName, setEditName] = useState('');
     const [nameError, setNameError] = useState(false);
+    const [titleError, setTitleError] = useState(false);
 
     const RECIPE_TYPES = [
         { value: 'full_meal', label: 'Full Meal' },
@@ -109,8 +110,14 @@ function Recipes() {
     }
 
     async function addRecipe() {
-        if (title === '') return;
-        const {error} = await supabase.from('recipes').insert([{ name: title, type: newRecipeType || null }]);
+        const trimmedTitle = title.trim();
+        if (!trimmedTitle) {
+            setTitleError(true);
+            return;
+        }
+        setTitleError(false);
+
+        const {error} = await supabase.from('recipes').insert([{ name: trimmedTitle, type: newRecipeType || null }]);
         if (error) console.error('Failed to create recipe:', error);
         if (!error) { setTitle(''); setNewRecipeType(''); fetchRecipes(); }
     }
@@ -269,27 +276,38 @@ function Recipes() {
             {isVisible && (
                 <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                     {/* Create Recipe Header */}
-                    <div className="flex gap-3 mb-8 p-4 bg-gray-50 rounded-xl border border-gray-200 shadow-sm">
-                        <input
-                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg outline-none focus:border-indigo-500 transition-colors"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            placeholder="Recipe Title (e.g. Pasta)"
-                        />
-                        <select
-                            aria-label="New Recipe Type"
-                            className="px-4 py-2 border border-gray-300 rounded-lg outline-none focus:border-indigo-500 transition-colors bg-white text-gray-700"
-                            value={newRecipeType}
-                            onChange={(e) => setNewRecipeType(e.target.value)}
-                        >
-                            <option value="">Type (optional)</option>
-                            {RECIPE_TYPES.map(t => (
-                                <option key={t.value} value={t.value}>{t.label}</option>
-                            ))}
-                        </select>
-                        <button className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg transition-all active:scale-95" onClick={addRecipe}>
-                            Create Recipe
-                        </button>
+                    <div className="mb-8 p-4 bg-gray-50 rounded-xl border border-gray-200 shadow-sm">
+                        <div className="flex gap-3">
+                            <input
+                                className={`flex-1 px-4 py-2 border rounded-lg outline-none transition-colors ${
+                                    titleError ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-indigo-500'
+                                }`}
+                                value={title}
+                                onChange={(e) => {
+                                    setTitle(e.target.value);
+                                    if (titleError) setTitleError(false);
+                                }}
+                                placeholder="Recipe Title (e.g. Pasta)"
+                            />
+                            <select
+                                aria-label="New Recipe Type"
+                                className="px-4 py-2 border border-gray-300 rounded-lg outline-none focus:border-indigo-500 transition-colors bg-white text-gray-700"
+                                value={newRecipeType}
+                                onChange={(e) => setNewRecipeType(e.target.value)}
+                            >
+                                <option value="">Type (optional)</option>
+                                {RECIPE_TYPES.map(t => (
+                                    <option key={t.value} value={t.value}>{t.label}</option>
+                                ))}
+                            </select>
+                            <button className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg transition-all active:scale-95" onClick={addRecipe}>
+                                Create Recipe
+                            </button>
+                        </div>
+
+                        {titleError && (
+                            <p className="text-red-500 text-[10px] font-bold mt-2 ml-1">⚠️ Give the recipe a title first</p>
+                        )}
                     </div>
 
                     <div className="flex flex-col lg:flex-row gap-8">
