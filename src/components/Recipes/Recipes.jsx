@@ -8,7 +8,6 @@ function Recipes() {
     const [title, setTitle] = useState('');
     const [type, setType] = useState('');
     const [selectedRecipe, setSelectedRecipe] = useState(null);
-    const [pantryItems, setPantryItems] = useState([]);
     const [recipeIngredients, setRecipeIngredients] = useState([]);
     const [description, setDescription] = useState('');
     const [uploadingImage, setUploadingImage] = useState(false);
@@ -29,17 +28,11 @@ function Recipes() {
 
     useEffect(() => {
         fetchRecipes();
-        fetchPantryItems();
     }, []);
 
     async function fetchRecipes() {
         const {data} = await supabase.from('recipes').select('*');
         if (data) setRecipes(data);
-    }
-
-    async function fetchPantryItems() {
-        const {data} = await supabase.from('ingredients').select('*');
-        if (data) setPantryItems(data);
     }
 
     async function fetchRecipeIngredients(recipeId) {
@@ -61,8 +54,6 @@ function Recipes() {
             const mergedData = data.map(item => ({
                 ...item.ingredients,
                 amount: item.amount,
-                // Calculate total for this specific amount
-                totalCalories: (item.ingredients.calories_per_unit * item.amount) / 100,
             }));
             setRecipeIngredients(mergedData);
         }
