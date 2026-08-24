@@ -112,9 +112,9 @@ const IngredientSearch = ({ onSelect }) => {
             {/* The Results Dropdown */}
             {results.length > 0 && (
                 <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto">
-                    {results.map((hint, index) => (
+                    {results.map((hint) => (
                         <li
-                            key={index}
+                            key={hint.food.foodId}
                             className="p-3 hover:bg-indigo-50 cursor-pointer border-b last:border-b-0 flex justify-between items-center transition-colors"
                             onClick={() => {
                                 onSelect(hint.food); // Sends the whole food object to the parent

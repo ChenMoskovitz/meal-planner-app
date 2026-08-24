@@ -380,8 +380,8 @@ function Recipes() {
                                                 </button>
                                             </div>
 
-                                            {errors.amount && <p className="text-red-500 text-[10px] font-bold mt--4 mb-4 ml-1 animate-pulse">⚠️ Enter amount first</p>}
-                                            {errors.name && <p className="text-red-500 text-[10px] font-bold mt--4 mb-4 ml-1 animate-pulse">⚠️ Search and click an item first</p>}
+                                            {errors.amount && <p className="text-red-500 text-[10px] font-bold -mt-4 mb-4 ml-1 animate-pulse">⚠️ Enter amount first</p>}
+                                            {errors.name && <p className="text-red-500 text-[10px] font-bold -mt-4 mb-4 ml-1 animate-pulse">⚠️ Search and click an item first</p>}
 
                                             {ingredientsError && (
                                                 <p className="text-red-600 text-xs font-bold mb-2">{ingredientsError}</p>
