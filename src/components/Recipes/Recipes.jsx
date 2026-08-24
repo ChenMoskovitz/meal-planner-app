@@ -43,9 +43,7 @@ function Recipes() {
             ingredients:ingredient_id (
                 id,
                 name,
-                unit_type,
-                calories_per_unit,
-                protein_per_unit
+                unit_type
             )
         `)
             .eq('recipe_id', recipeId);
