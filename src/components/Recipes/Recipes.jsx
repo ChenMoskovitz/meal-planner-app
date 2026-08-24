@@ -42,45 +42,6 @@ function Recipes() {
         if (data) setPantryItems(data);
     }
 
-    // --- NEW LOGIC: HANDLING API INGREDIENTS ---
-    async function handleApiIngredientSelect(food) {
-        if (!selectedRecipe) return;
-
-        // 1. Check if this ingredient already exists in your DB by name
-        let { data: existingIng, error: searchError } = await supabase
-            .from('ingredients')
-            .select('id')
-            .eq('name', food.label)
-            .single();
-
-        let ingredientId;
-
-        if (existingIng) {
-            ingredientId = existingIng.id;
-        } else {
-            // 2. If it doesn't exist, create it using the API data!
-            const { data: newIng, error: createError } = await supabase
-                .from('ingredients')
-                .insert([{
-                    name: food.label,
-                    unit_type: 'g', // Default to grams for API items
-                    stock_quantity: 0
-                }])
-                .select()
-                .single();
-
-            if (createError) {
-                alert("Error creating new ingredient: " + createError.message);
-                return;
-            }
-            ingredientId = newIng.id;
-            fetchPantryItems(); // Refresh the list
-        }
-
-        // 3. Link this ingredient to the current recipe
-        addIngredientToRecipe(ingredientId);
-    }
-
     async function fetchRecipeIngredients(recipeId) {
         const { data, error } = await supabase
             .from('recipe_ingredients')
@@ -90,8 +51,8 @@ function Recipes() {
                 id,
                 name,
                 unit_type,
-                calories_per_unit, -- Added this
-                protein_per_unit  -- Added this
+                calories_per_unit,
+                protein_per_unit
             )
         `)
             .eq('recipe_id', recipeId);
@@ -108,13 +69,30 @@ function Recipes() {
     }
 
     async function addIngredientToRecipe(ingredientId) {
-        const { error } = await supabase
+        // Already in this recipe? Add to the existing amount rather than creating
+        // a second row, the same way Pantry.jsx merges repeat quantities.
+        const { data: existing } = await supabase
             .from('recipe_ingredients')
-            .insert([{
-                recipe_id: selectedRecipe.id,
-                ingredient_id: ingredientId,
-                amount: amount
-            }]);
+            .select('amount')
+            .eq('recipe_id', selectedRecipe.id)
+            .eq('ingredient_id', ingredientId)
+            .limit(1);
+
+        const existingRow = existing?.[0];
+
+        const { error } = existingRow
+            ? await supabase
+                .from('recipe_ingredients')
+                .update({ amount: Number(existingRow.amount) + Number(amount) })
+                .eq('recipe_id', selectedRecipe.id)
+                .eq('ingredient_id', ingredientId)
+            : await supabase
+                .from('recipe_ingredients')
+                .insert([{
+                    recipe_id: selectedRecipe.id,
+                    ingredient_id: ingredientId,
+                    amount: amount
+                }]);
 
         if (!error) {
             fetchRecipeIngredients(selectedRecipe.id);
@@ -378,7 +356,7 @@ function Recipes() {
                                                         handleApiIngredientSelect(lastSelectedFood);
                                                         setLastSelectedFood(null); // Clear it after adding so the same item isn't added twice by mistake
                                                     }}
-                                                    className="..."
+                                                    className="h-[42px] px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-sm transition-all active:scale-95"
                                                 >
                                                     Add
                                                 </button>
