@@ -18,6 +18,7 @@ function Recipes() {
     const [errors, setErrors] = useState({ name: false, amount: false });
     const [lastSelectedFood, setLastSelectedFood] = useState(null);
     const [newRecipeType, setNewRecipeType] = useState('');
+    const [ingredientsError, setIngredientsError] = useState(null);
 
     const RECIPE_TYPES = [
         { value: 'full_meal', label: 'Full Meal' },
@@ -31,7 +32,10 @@ function Recipes() {
     }, []);
 
     async function fetchRecipes() {
-        const {data} = await supabase.from('recipes').select('*');
+        const {data, error} = await supabase.from('recipes').select('*');
+        // Supabase reports failures in `error` rather than throwing, so an
+        // unchecked call fails silently and leaves the screen blank.
+        if (error) console.error('Failed to load recipes:', error);
         if (data) setRecipes(data);
     }
 
@@ -47,6 +51,15 @@ function Recipes() {
             )
         `)
             .eq('recipe_id', recipeId);
+
+        if (error) {
+            console.error('Failed to load recipe ingredients:', error);
+            setIngredientsError("Couldn't load this recipe's ingredients.");
+            setRecipeIngredients([]); // don't leave the previous recipe's bubbles on screen
+            return;
+        }
+
+        setIngredientsError(null);
 
         if (data) {
             const mergedData = data.map(item => ({
@@ -83,6 +96,8 @@ function Recipes() {
                     amount: amount
                 }]);
 
+        if (error) console.error('Failed to add ingredient:', error);
+
         if (!error) {
             fetchRecipeIngredients(selectedRecipe.id);
             setAmount(1);
@@ -94,6 +109,7 @@ function Recipes() {
     async function addRecipe() {
         if (title === '') return;
         const {error} = await supabase.from('recipes').insert([{ name: title, type: newRecipeType || null }]);
+        if (error) console.error('Failed to create recipe:', error);
         if (!error) { setTitle(''); setNewRecipeType(''); fetchRecipes(); }
     }
 
@@ -103,6 +119,9 @@ function Recipes() {
             .delete()
             .eq('recipe_id', selectedRecipe.id)
             .eq('ingredient_id', ingredientId);
+
+        if (error) console.error('Failed to remove ingredient:', error);
+
         if (!error) {
             fetchRecipeIngredients(selectedRecipe.id);
             if (selectedNutrition) calculateRecipeNutrition(selectedRecipe.id);
@@ -133,6 +152,7 @@ function Recipes() {
     async function deleteRecipe(recipeId) {
         if (!window.confirm("Are you sure?")) return;
         const { error } = await supabase.from('recipes').delete().eq('id', recipeId);
+        if (error) console.error('Failed to delete recipe:', error);
         if (!error) { setSelectedRecipe(null); fetchRecipes(); }
     }
 
@@ -210,6 +230,8 @@ function Recipes() {
         const fileExt = file.name.split('.').pop();
         const fileName = `${selectedRecipe.id}-${Date.now()}.${fileExt}`;
         const { error: uploadError } = await supabase.storage.from('recipe-images').upload(fileName, file);
+        if (uploadError) console.error('Failed to upload recipe image:', uploadError);
+
         if (!uploadError) {
             const { data } = supabase.storage.from('recipe-images').getPublicUrl(fileName);
             await supabase.from('recipes').update({ image_url: data.publicUrl }).eq('id', selectedRecipe.id);
@@ -360,6 +382,10 @@ function Recipes() {
 
                                             {errors.amount && <p className="text-red-500 text-[10px] font-bold mt--4 mb-4 ml-1 animate-pulse">⚠️ Enter amount first</p>}
                                             {errors.name && <p className="text-red-500 text-[10px] font-bold mt--4 mb-4 ml-1 animate-pulse">⚠️ Search and click an item first</p>}
+
+                                            {ingredientsError && (
+                                                <p className="text-red-600 text-xs font-bold mb-2">{ingredientsError}</p>
+                                            )}
 
                                             {/* Ingredient Bubbles */}
                                             <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-200">
