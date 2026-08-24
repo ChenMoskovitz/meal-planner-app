@@ -1,45 +1,87 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 const IngredientSearch = ({ onSelect }) => {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [searchedQuery, setSearchedQuery] = useState('');
+    const [selectedLabel, setSelectedLabel] = useState('');
+    const containerRef = useRef(null);
+
+    // Clicking anywhere outside the box closes the dropdown.
+    useEffect(() => {
+        function handleClickOutside(e) {
+            if (containerRef.current && !containerRef.current.contains(e.target)) {
+                setResults([]);
+            }
+        }
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     // This effect handles the "Debounce" logic
     useEffect(() => {
+        if (query.length <= 2) {
+            setResults([]);
+            setError(null);
+            return;
+        }
+
+        // Picking an item fills the input with its name. Don't treat that as a
+        // new search, or the dropdown reopens on the thing just chosen.
+        if (query === selectedLabel) {
+            setResults([]);
+            return;
+        }
+
+        // Aborting the previous request stops a slow earlier response from
+        // landing after a newer one and overwriting its results.
+        const controller = new AbortController();
         const delayDebounceFn = setTimeout(() => {
-            if (query.length > 2) {
-                searchFood();
-            } else {
-                setResults([]);
-            }
+            searchFood(controller.signal);
         }, 500); // Waits 500ms after you stop typing to call the API
 
-        return () => clearTimeout(delayDebounceFn);
-    }, [query]);
+        return () => {
+            clearTimeout(delayDebounceFn);
+            controller.abort();
+        };
+    }, [query, selectedLabel]);
 
-    const searchFood = async () => {
+    const searchFood = async (signal) => {
         setLoading(true);
+        setError(null);
         // These match the names we put in your .env file
         const appId = import.meta.env.VITE_EDAMAM_FOOD_ID;
         const appKey = import.meta.env.VITE_EDAMAM_FOOD_KEY;
 
         try {
             const response = await fetch(
-                `https://api.edamam.com/api/food-database/v2/parser?app_id=${appId}&app_key=${appKey}&ingr=${query}`
+                `https://api.edamam.com/api/food-database/v2/parser?app_id=${appId}&app_key=${appKey}&ingr=${encodeURIComponent(query)}`,
+                { signal }
             );
+
+            // A rejected key or an exhausted quota still arrives as a valid
+            // response, so check the status before trusting the body.
+            if (!response.ok) throw new Error(`Edamam responded ${response.status}`);
+
             const data = await response.json();
             // 'hints' is the array of food items Edamam sends back
             setResults(data.hints || []);
-        } catch (error) {
-            console.error("Error fetching food from Edamam:", error);
+            setSearchedQuery(query);
+        } catch (err) {
+            if (err.name === 'AbortError') return; // superseded by a newer search
+            console.error("Error fetching food from Edamam:", err);
+            setResults([]);
+            setError("Couldn't reach the food database. Try again.");
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="relative w-full mb-4">
+        <div className="relative w-full mb-4" ref={containerRef}>
             <label className="block text-sm font-medium text-gray-700 mb-1">
                 Search Ingredient
             </label>
@@ -59,6 +101,14 @@ const IngredientSearch = ({ onSelect }) => {
                 )}
             </div>
 
+            {error && (
+                <p className="mt-1 text-xs font-medium text-red-600">{error}</p>
+            )}
+
+            {!loading && !error && searchedQuery === query && results.length === 0 && (
+                <p className="mt-1 text-xs text-gray-500">No results for &ldquo;{query}&rdquo;.</p>
+            )}
+
             {/* The Results Dropdown */}
             {results.length > 0 && (
                 <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto">
@@ -69,6 +119,7 @@ const IngredientSearch = ({ onSelect }) => {
                             onClick={() => {
                                 onSelect(hint.food); // Sends the whole food object to the parent
                                 setQuery(hint.food.label); // Fills the input with the name
+                                setSelectedLabel(hint.food.label);
                                 setResults([]); // Closes the dropdown
                             }}
                         >
