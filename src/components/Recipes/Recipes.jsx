@@ -19,6 +19,8 @@ function Recipes() {
     const [lastSelectedFood, setLastSelectedFood] = useState(null);
     const [newRecipeType, setNewRecipeType] = useState('');
     const [ingredientsError, setIngredientsError] = useState(null);
+    const [editName, setEditName] = useState('');
+    const [nameError, setNameError] = useState(false);
 
     const RECIPE_TYPES = [
         { value: 'full_meal', label: 'Full Meal' },
@@ -131,9 +133,17 @@ function Recipes() {
     async function updateRecipe() {
         if (!selectedRecipe) return;
 
+        const trimmedName = editName.trim();
+        if (!trimmedName) {
+            setNameError(true);
+            return;
+        }
+        setNameError(false);
+
         const { error } = await supabase
             .from('recipes')
             .update({
+                name: trimmedName,
                 description,
                 type: type || null,
                 base_servings: baseServings
@@ -144,6 +154,10 @@ function Recipes() {
             console.error("Error updating recipe:", error);
             return;
         }
+
+        // Keep the heading and the list in step with the saved name.
+        setSelectedRecipe({ ...selectedRecipe, name: trimmedName });
+        setEditName(trimmedName);
 
         alert("Updated!");
         fetchRecipes();
@@ -211,6 +225,8 @@ function Recipes() {
 
     const handleSelectRecipe = (recipe) => {
         setSelectedRecipe(recipe);
+        setEditName(recipe.name || '');
+        setNameError(false);
         setType(recipe.type || '');
         setDescription(recipe.description || '');
         setBaseServings(recipe.base_servings || 1);
@@ -397,6 +413,29 @@ function Recipes() {
                                                     </div>
                                                 ))}
                                             </div>
+                                        </div>
+
+                                        {/* Recipe Name */}
+                                        <div>
+                                            <label
+                                                htmlFor="recipe-name"
+                                                className="block text-sm font-black text-gray-400 uppercase mb-2 tracking-tighter"
+                                            >Recipe Name</label>
+                                            <input
+                                                id="recipe-name"
+                                                type="text"
+                                                className={`w-full p-4 bg-gray-50 border rounded-xl outline-none transition-colors shadow-inner ${
+                                                    nameError ? 'border-red-500 bg-red-50' : 'border-gray-200 focus:border-indigo-400'
+                                                }`}
+                                                value={editName}
+                                                onChange={(e) => {
+                                                    setEditName(e.target.value);
+                                                    if (nameError) setNameError(false);
+                                                }}
+                                            />
+                                            {nameError && (
+                                                <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">⚠️ Recipe name can't be empty</p>
+                                            )}
                                         </div>
 
                                         {/* Recipe Type */}
