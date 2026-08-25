@@ -38,7 +38,10 @@ function Recipes() {
     }, []);
 
     async function fetchRecipes() {
-        const {data, error} = await supabase.from('recipes').select('*');
+        const {data, error} = await supabase
+            .from('recipes')
+            .select('*')
+            .order('name', { ascending: true });
         // Supabase reports failures in `error` rather than throwing, so an
         // unchecked call fails silently and leaves the screen blank.
         if (error) console.error('Failed to load recipes:', error);
