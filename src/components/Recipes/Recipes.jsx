@@ -39,6 +39,7 @@ function Recipes() {
     const [editingAmount, setEditingAmount] = useState('');
     const cancelAmountEditRef = useRef(false);
     const [imageError, setImageError] = useState(null);
+    const [selectedUnit, setSelectedUnit] = useState('g');
 
     const RECIPE_TYPES = [
         { value: 'full_meal', label: 'Full Meal' },
@@ -140,6 +141,25 @@ function Recipes() {
         const {error} = await supabase.from('recipes').insert([{ name: trimmedTitle, type: newRecipeType || null }]);
         if (error) console.error('Failed to create recipe:', error);
         if (!error) { setTitle(''); setNewRecipeType(''); fetchRecipes(); }
+    }
+
+    // The Qty box used to claim grams for everything. An ingredient added
+    // through the Pantry may be in ml, and the search reuses it by name.
+    async function lookupIngredientUnit(name) {
+        setSelectedUnit('g'); // what a new ingredient will be created as
+
+        const { data, error } = await supabase
+            .from('ingredients')
+            .select('unit_type')
+            .eq('name', name)
+            .limit(1);
+
+        if (error) {
+            console.error('Failed to look up the ingredient unit:', error);
+            return;
+        }
+
+        if (data?.[0]?.unit_type) setSelectedUnit(data[0].unit_type);
     }
 
     async function saveIngredientAmount(ingredientId, rawValue) {
@@ -285,6 +305,7 @@ function Recipes() {
         setNameError(false);
         setEditingIngredientId(null);
         setImageError(null);
+        setSelectedUnit('g');
         setType(recipe.type || '');
         setDescription(recipe.description || '');
         setBaseServings(recipe.base_servings || 1);
@@ -487,10 +508,11 @@ function Recipes() {
                                                     <IngredientSearch hideLabel onSelect={(food) => {
                                                         setLastSelectedFood(food);
                                                         setErrors(prev => ({ ...prev, name: false })); // Clear the "name" error once picked
+                                                        lookupIngredientUnit(food.label);
                                                     }} />
                                                 </div>
                                                 <div className="w-24">
-                                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Qty (g)</label>
+                                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Qty ({selectedUnit})</label>
                                                     <input
                                                         type="number"
                                                         value={amount}
@@ -509,6 +531,7 @@ function Recipes() {
                                                         }
                                                         handleApiIngredientSelect(lastSelectedFood);
                                                         setLastSelectedFood(null); // Clear it after adding so the same item isn't added twice by mistake
+                                                        setSelectedUnit('g');
                                                     }}
                                                     className="h-[42px] px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-sm transition-all active:scale-95"
                                                 >
