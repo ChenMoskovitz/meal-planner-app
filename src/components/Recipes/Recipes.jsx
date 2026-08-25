@@ -418,7 +418,7 @@ function Recipes() {
                                             <div className="flex items-end gap-3 mb-6">
                                                 <div className="flex-1">
                                                     <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Search Food</label>
-                                                    <IngredientSearch onSelect={(food) => {
+                                                    <IngredientSearch hideLabel onSelect={(food) => {
                                                         setLastSelectedFood(food);
                                                         setErrors(prev => ({ ...prev, name: false })); // Clear the "name" error once picked
                                                     }} />

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-const IngredientSearch = ({ onSelect }) => {
+const IngredientSearch = ({ onSelect, hideLabel = false }) => {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -81,10 +81,12 @@ const IngredientSearch = ({ onSelect }) => {
     };
 
     return (
-        <div className="relative w-full mb-4" ref={containerRef}>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-                Search Ingredient
-            </label>
+        <div className="relative w-full" ref={containerRef}>
+            {!hideLabel && (
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Search Ingredient
+                </label>
+            )}
             <div className="relative">
                 <input
                     type="text"
