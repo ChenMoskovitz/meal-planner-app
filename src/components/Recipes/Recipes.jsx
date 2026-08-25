@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {supabase} from '../../config/supabaseClient.js';
 import { getRecipeNutrition } from '../../utils/nutritionHelper.js';
 import IngredientSearch from '../IngredientSearch';
@@ -22,6 +22,9 @@ function Recipes() {
     const [editName, setEditName] = useState('');
     const [nameError, setNameError] = useState(false);
     const [titleError, setTitleError] = useState(false);
+    const [editingIngredientId, setEditingIngredientId] = useState(null);
+    const [editingAmount, setEditingAmount] = useState('');
+    const cancelAmountEditRef = useRef(false);
 
     const RECIPE_TYPES = [
         { value: 'full_meal', label: 'Full Meal' },
@@ -120,6 +123,35 @@ function Recipes() {
         const {error} = await supabase.from('recipes').insert([{ name: trimmedTitle, type: newRecipeType || null }]);
         if (error) console.error('Failed to create recipe:', error);
         if (!error) { setTitle(''); setNewRecipeType(''); fetchRecipes(); }
+    }
+
+    async function saveIngredientAmount(ingredientId, rawValue) {
+        setEditingIngredientId(null);
+
+        // Escape sets this so the blur that follows doesn't save anyway.
+        if (cancelAmountEditRef.current) {
+            cancelAmountEditRef.current = false;
+            return;
+        }
+
+        const nextAmount = Number(rawValue);
+        if (!Number.isFinite(nextAmount) || nextAmount <= 0) return;
+
+        const current = recipeIngredients.find(i => i.id === ingredientId);
+        if (current && Number(current.amount) === nextAmount) return;
+
+        const { error } = await supabase
+            .from('recipe_ingredients')
+            .update({ amount: nextAmount })
+            .eq('recipe_id', selectedRecipe.id)
+            .eq('ingredient_id', ingredientId);
+
+        if (error) console.error('Failed to update ingredient amount:', error);
+
+        if (!error) {
+            fetchRecipeIngredients(selectedRecipe.id);
+            if (selectedNutrition) calculateRecipeNutrition(selectedRecipe.id);
+        }
     }
 
     async function removeIngredientFromRecipe(ingredientId) {
@@ -234,6 +266,7 @@ function Recipes() {
         setSelectedRecipe(recipe);
         setEditName(recipe.name || '');
         setNameError(false);
+        setEditingIngredientId(null);
         setType(recipe.type || '');
         setDescription(recipe.description || '');
         setBaseServings(recipe.base_servings || 1);
@@ -425,7 +458,40 @@ function Recipes() {
                                             <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-200">
                                                 {recipeIngredients.map((ing) => (
                                                     <div key={ing.id} className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-gray-200 text-xs font-bold shadow-sm group">
-                                                        <span className="text-indigo-600">{ing.amount}{ing.unit_type}</span>
+                                                        {editingIngredientId === ing.id ? (
+                                                            <span className="flex items-center gap-0.5 text-indigo-600">
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    step="any"
+                                                                    autoFocus
+                                                                    value={editingAmount}
+                                                                    onChange={(e) => setEditingAmount(e.target.value)}
+                                                                    onBlur={(e) => saveIngredientAmount(ing.id, e.target.value)}
+                                                                    onKeyDown={(e) => {
+                                                                        if (e.key === 'Enter') e.currentTarget.blur();
+                                                                        if (e.key === 'Escape') {
+                                                                            cancelAmountEditRef.current = true;
+                                                                            e.currentTarget.blur();
+                                                                        }
+                                                                    }}
+                                                                    className="w-12 px-1 border border-indigo-300 rounded text-xs font-bold text-indigo-600 outline-none"
+                                                                />
+                                                                {ing.unit_type}
+                                                            </span>
+                                                        ) : (
+                                                            <button
+                                                                type="button"
+                                                                title="Click to change the amount"
+                                                                onClick={() => {
+                                                                    setEditingIngredientId(ing.id);
+                                                                    setEditingAmount(String(ing.amount));
+                                                                }}
+                                                                className="text-indigo-600 hover:underline"
+                                                            >
+                                                                {ing.amount}{ing.unit_type}
+                                                            </button>
+                                                        )}
                                                         <span className="text-gray-700 uppercase tracking-tight">{ing.name}</span>
                                                         <button onClick={() => removeIngredientFromRecipe(ing.id)} className="text-gray-300 hover:text-red-500 transition-colors ml-1">✕</button>
                                                     </div>
