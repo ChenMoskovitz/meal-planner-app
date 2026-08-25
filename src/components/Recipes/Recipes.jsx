@@ -3,6 +3,19 @@ import {supabase} from '../../config/supabaseClient.js';
 import { getRecipeNutrition } from '../../utils/nutritionHelper.js';
 import IngredientSearch from '../IngredientSearch';
 
+const IMAGE_BUCKET = 'recipe-images';
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const MAX_IMAGE_MB = 5;
+
+// ".../object/public/recipe-images/<name>" -> "<name>"
+function storageNameFromUrl(url) {
+    if (!url) return null;
+    const marker = `/${IMAGE_BUCKET}/`;
+    const at = url.indexOf(marker);
+    if (at === -1) return null;
+    return decodeURIComponent(url.slice(at + marker.length).split('?')[0]);
+}
+
 function Recipes() {
     const [recipes, setRecipes] = useState([]);
     const [title, setTitle] = useState('');
@@ -25,6 +38,7 @@ function Recipes() {
     const [editingIngredientId, setEditingIngredientId] = useState(null);
     const [editingAmount, setEditingAmount] = useState('');
     const cancelAmountEditRef = useRef(false);
+    const [imageError, setImageError] = useState(null);
 
     const RECIPE_TYPES = [
         { value: 'full_meal', label: 'Full Meal' },
@@ -270,6 +284,7 @@ function Recipes() {
         setEditName(recipe.name || '');
         setNameError(false);
         setEditingIngredientId(null);
+        setImageError(null);
         setType(recipe.type || '');
         setDescription(recipe.description || '');
         setBaseServings(recipe.base_servings || 1);
@@ -284,19 +299,61 @@ function Recipes() {
 
     async function uploadRecipeImage(e) {
         const file = e.target.files[0];
+        e.target.value = ''; // so the same file can be picked again after a failure
         if (!file || !selectedRecipe) return;
+
+        setImageError(null);
+
+        if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+            setImageError('Choose a JPEG, PNG, WebP or GIF image.');
+            return;
+        }
+
+        if (file.size > MAX_IMAGE_MB * 1024 * 1024) {
+            const sizeMb = (file.size / 1024 / 1024).toFixed(1);
+            setImageError(`That image is ${sizeMb}MB. The limit is ${MAX_IMAGE_MB}MB.`);
+            return;
+        }
+
         setUploadingImage(true);
+
+        const previousUrl = selectedRecipe.image_url;
         const fileExt = file.name.split('.').pop();
         const fileName = `${selectedRecipe.id}-${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage.from('recipe-images').upload(fileName, file);
-        if (uploadError) console.error('Failed to upload recipe image:', uploadError);
 
-        if (!uploadError) {
-            const { data } = supabase.storage.from('recipe-images').getPublicUrl(fileName);
-            await supabase.from('recipes').update({ image_url: data.publicUrl }).eq('id', selectedRecipe.id);
-            setSelectedRecipe({ ...selectedRecipe, image_url: data.publicUrl });
-            fetchRecipes();
+        const { error: uploadError } = await supabase.storage.from(IMAGE_BUCKET).upload(fileName, file);
+
+        if (uploadError) {
+            console.error('Failed to upload recipe image:', uploadError);
+            setImageError("Couldn't upload that image. Try again.");
+            setUploadingImage(false);
+            return;
         }
+
+        const { data } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(fileName);
+
+        const { error: updateError } = await supabase
+            .from('recipes')
+            .update({ image_url: data.publicUrl })
+            .eq('id', selectedRecipe.id);
+
+        if (updateError) {
+            console.error('Failed to save the recipe image URL:', updateError);
+            setImageError("Uploaded, but couldn't attach the image to the recipe.");
+            setUploadingImage(false);
+            return;
+        }
+
+        // The old file is unreachable once the recipe points elsewhere, so
+        // don't leave it sitting in storage forever.
+        const previousName = storageNameFromUrl(previousUrl);
+        if (previousName && previousName !== fileName) {
+            const { error: removeError } = await supabase.storage.from(IMAGE_BUCKET).remove([previousName]);
+            if (removeError) console.error('Failed to remove the previous recipe image:', removeError);
+        }
+
+        setSelectedRecipe({ ...selectedRecipe, image_url: data.publicUrl });
+        fetchRecipes();
         setUploadingImage(false);
     }
 
@@ -407,8 +464,17 @@ function Recipes() {
                                             {selectedRecipe.image_url && <img src={selectedRecipe.image_url} className="w-full h-48 object-cover rounded-lg mb-4 shadow-sm" alt="Recipe" />}
                                             <label className="cursor-pointer bg-white border border-gray-200 px-6 py-2 rounded-lg text-xs font-black uppercase tracking-wider shadow-sm hover:bg-gray-50 transition-colors">
                                                 {uploadingImage ? 'Uploading...' : 'Upload Photo'}
-                                                <input type="file" className="hidden" onChange={uploadRecipeImage} />
+                                                <input
+                                                    type="file"
+                                                    accept={ALLOWED_IMAGE_TYPES.join(',')}
+                                                    className="hidden"
+                                                    onChange={uploadRecipeImage}
+                                                />
                                             </label>
+
+                                            {imageError && (
+                                                <p className="text-red-600 text-xs font-bold mt-2 text-center">{imageError}</p>
+                                            )}
                                         </div>
 
                                         {/* INGREDIENT SEARCH & ADD SECTION */}
