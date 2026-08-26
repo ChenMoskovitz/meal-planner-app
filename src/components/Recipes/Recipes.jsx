@@ -40,6 +40,7 @@ function Recipes() {
     const cancelAmountEditRef = useRef(false);
     const [imageError, setImageError] = useState(null);
     const [selectedUnit, setSelectedUnit] = useState('g');
+    const [deleteError, setDeleteError] = useState(null);
 
     const RECIPE_TYPES = [
         { value: 'full_meal', label: 'Full Meal' },
@@ -240,10 +241,28 @@ function Recipes() {
     }
 
     async function deleteRecipe(recipeId) {
-        if (!window.confirm("Are you sure?")) return;
+        const recipe = recipes.find(r => r.id === recipeId);
+        if (!window.confirm(`Delete "${recipe?.name || 'this recipe'}"? This can't be undone.`)) return;
+
+        setDeleteError(null);
+
         const { error } = await supabase.from('recipes').delete().eq('id', recipeId);
-        if (error) console.error('Failed to delete recipe:', error);
-        if (!error) { setSelectedRecipe(null); fetchRecipes(); }
+
+        if (error) {
+            console.error('Failed to delete recipe:', error);
+            setDeleteError("Couldn't delete this recipe.");
+            return;
+        }
+
+        // Its image is unreachable now, so don't leave it in storage.
+        const imageName = storageNameFromUrl(recipe?.image_url);
+        if (imageName) {
+            const { error: removeError } = await supabase.storage.from(IMAGE_BUCKET).remove([imageName]);
+            if (removeError) console.error('Failed to remove the deleted recipe image:', removeError);
+        }
+
+        setSelectedRecipe(null);
+        fetchRecipes();
     }
 
     async function handleApiIngredientSelect(food) {
@@ -308,6 +327,7 @@ function Recipes() {
         setSelectedUnit('g');
         setLastSelectedFood(null);
         setErrors({ name: false, amount: false });
+        setDeleteError(null);
         setType(recipe.type || '');
         setDescription(recipe.description || '');
         setBaseServings(recipe.base_servings || 1);
@@ -459,6 +479,13 @@ function Recipes() {
                                             </button>
 
                                             <button
+                                                onClick={() => deleteRecipe(selectedRecipe.id)}
+                                                className="text-xs font-bold bg-red-50 text-red-600 px-4 py-2 rounded-lg hover:bg-red-100 transition-colors"
+                                            >
+                                                🗑 Delete
+                                            </button>
+
+                                            <button
                                                 aria-label="Close selected recipe"
                                                 onClick={() => setSelectedRecipe(null)}
                                                 className="text-xs font-bold bg-gray-100 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
@@ -467,6 +494,10 @@ function Recipes() {
                                             </button>
                                         </div>
                                     </div>
+
+                                    {deleteError && (
+                                        <p className="text-red-600 text-xs font-bold mb-4">{deleteError}</p>
+                                    )}
 
                                     {/* Nutrition Box */}
                                     {selectedNutrition && (
