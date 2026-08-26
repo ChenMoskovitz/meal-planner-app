@@ -98,12 +98,18 @@ function Recipes() {
     async function addIngredientToRecipe(ingredientId) {
         // Already in this recipe? Add to the existing amount rather than creating
         // a second row, the same way Pantry.jsx merges repeat quantities.
-        const { data: existing } = await supabase
+        const { data: existing, error: lookupError } = await supabase
             .from('recipe_ingredients')
             .select('amount')
             .eq('recipe_id', selectedRecipe.id)
             .eq('ingredient_id', ingredientId)
             .limit(1);
+
+        // Treating a failed lookup as "not here yet" would insert a second row.
+        if (lookupError) {
+            console.error('Failed to check for an existing ingredient row:', lookupError);
+            return;
+        }
 
         const existingRow = existing?.[0];
 
@@ -277,13 +283,21 @@ function Recipes() {
             return; // STOP: Don't create or link anything if amount is missing
         }
 
-        // 2. Check if this ingredient already exists
-        let { data: existingIng } = await supabase
+        // 2. Check if this ingredient already exists.
+        // limit(1) rather than maybeSingle(), which errors outright when two
+        // ingredients share a name instead of just picking one.
+        const { data: existingRows, error: lookupError } = await supabase
             .from('ingredients')
             .select('id')
             .eq('name', food.label)
-            .maybeSingle();
+            .limit(1);
 
+        if (lookupError) {
+            console.error('Failed to look up the ingredient:', lookupError);
+            return;
+        }
+
+        const existingIng = existingRows?.[0];
         let ingredientId;
 
         if (existingIng) {
