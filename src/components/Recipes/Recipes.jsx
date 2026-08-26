@@ -38,9 +38,14 @@ function Recipes() {
     const [editingIngredientId, setEditingIngredientId] = useState(null);
     const [editingAmount, setEditingAmount] = useState('');
     const cancelAmountEditRef = useRef(false);
+    const unitLookupRef = useRef(0);
     const [imageError, setImageError] = useState(null);
     const [selectedUnit, setSelectedUnit] = useState('g');
-    const [deleteError, setDeleteError] = useState(null);
+    const [actionStatus, setActionStatus] = useState(null); // { kind: 'success' | 'error', message }
+    const [createError, setCreateError] = useState(null);
+
+    const showError = (message) => setActionStatus({ kind: 'error', message });
+    const showSuccess = (message) => setActionStatus({ kind: 'success', message });
 
     const RECIPE_TYPES = [
         { value: 'full_meal', label: 'Full Meal' },
@@ -96,6 +101,8 @@ function Recipes() {
     }
 
     async function addIngredientToRecipe(ingredientId) {
+        setActionStatus(null);
+
         // Already in this recipe? Add to the existing amount rather than creating
         // a second row, the same way Pantry.jsx merges repeat quantities.
         const { data: existing, error: lookupError } = await supabase
@@ -108,6 +115,7 @@ function Recipes() {
         // Treating a failed lookup as "not here yet" would insert a second row.
         if (lookupError) {
             console.error('Failed to check for an existing ingredient row:', lookupError);
+            showError("Couldn't add that ingredient. Try again.");
             return;
         }
 
@@ -127,7 +135,10 @@ function Recipes() {
                     amount: amount
                 }]);
 
-        if (error) console.error('Failed to add ingredient:', error);
+        if (error) {
+            console.error('Failed to add ingredient:', error);
+            showError("Couldn't add that ingredient. Try again.");
+        }
 
         if (!error) {
             fetchRecipeIngredients(selectedRecipe.id);
@@ -145,14 +156,25 @@ function Recipes() {
         }
         setTitleError(false);
 
+        setCreateError(null);
+
         const {error} = await supabase.from('recipes').insert([{ name: trimmedTitle, type: newRecipeType || null }]);
-        if (error) console.error('Failed to create recipe:', error);
-        if (!error) { setTitle(''); setNewRecipeType(''); fetchRecipes(); }
+
+        if (error) {
+            console.error('Failed to create recipe:', error);
+            setCreateError("Couldn't create that recipe. Try again.");
+            return;
+        }
+
+        setTitle('');
+        setNewRecipeType('');
+        fetchRecipes();
     }
 
     // The Qty box used to claim grams for everything. An ingredient added
     // through the Pantry may be in ml, and the search reuses it by name.
     async function lookupIngredientUnit(name) {
+        const lookupId = ++unitLookupRef.current;
         setSelectedUnit('g'); // what a new ingredient will be created as
 
         const { data, error } = await supabase
@@ -160,6 +182,10 @@ function Recipes() {
             .select('unit_type')
             .eq('name', name)
             .limit(1);
+
+        // A newer selection started while this was in flight, so this answer is
+        // stale — dropping it stops a slow reply overwriting a fresher one.
+        if (lookupId !== unitLookupRef.current) return;
 
         if (error) {
             console.error('Failed to look up the ingredient unit:', error);
@@ -171,6 +197,7 @@ function Recipes() {
 
     async function saveIngredientAmount(ingredientId, rawValue) {
         setEditingIngredientId(null);
+        setActionStatus(null);
 
         // Escape sets this so the blur that follows doesn't save anyway.
         if (cancelAmountEditRef.current) {
@@ -190,7 +217,10 @@ function Recipes() {
             .eq('recipe_id', selectedRecipe.id)
             .eq('ingredient_id', ingredientId);
 
-        if (error) console.error('Failed to update ingredient amount:', error);
+        if (error) {
+            console.error('Failed to update ingredient amount:', error);
+            showError("Couldn't update that amount. Try again.");
+        }
 
         if (!error) {
             fetchRecipeIngredients(selectedRecipe.id);
@@ -199,13 +229,18 @@ function Recipes() {
     }
 
     async function removeIngredientFromRecipe(ingredientId) {
+        setActionStatus(null);
+
         const { error } = await supabase
             .from('recipe_ingredients')
             .delete()
             .eq('recipe_id', selectedRecipe.id)
             .eq('ingredient_id', ingredientId);
 
-        if (error) console.error('Failed to remove ingredient:', error);
+        if (error) {
+            console.error('Failed to remove ingredient:', error);
+            showError("Couldn't remove that ingredient. Try again.");
+        }
 
         if (!error) {
             fetchRecipeIngredients(selectedRecipe.id);
@@ -215,6 +250,7 @@ function Recipes() {
 
     async function updateRecipe() {
         if (!selectedRecipe) return;
+        setActionStatus(null);
 
         const trimmedName = editName.trim();
         if (!trimmedName) {
@@ -235,6 +271,7 @@ function Recipes() {
 
         if (error) {
             console.error("Error updating recipe:", error);
+            showError("Couldn't save this recipe. Try again.");
             return;
         }
 
@@ -242,7 +279,7 @@ function Recipes() {
         setSelectedRecipe({ ...selectedRecipe, name: trimmedName });
         setEditName(trimmedName);
 
-        alert("Updated!");
+        showSuccess('Recipe saved.');
         fetchRecipes();
     }
 
@@ -250,13 +287,13 @@ function Recipes() {
         const recipe = recipes.find(r => r.id === recipeId);
         if (!window.confirm(`Delete "${recipe?.name || 'this recipe'}"? This can't be undone.`)) return;
 
-        setDeleteError(null);
+        setActionStatus(null);
 
         const { error } = await supabase.from('recipes').delete().eq('id', recipeId);
 
         if (error) {
             console.error('Failed to delete recipe:', error);
-            setDeleteError("Couldn't delete this recipe.");
+            showError("Couldn't delete this recipe. Try again.");
             return;
         }
 
@@ -273,6 +310,7 @@ function Recipes() {
 
     async function handleApiIngredientSelect(food) {
         if (!selectedRecipe) return;
+        setActionStatus(null);
 
         // 1. THE GUARD: Check validation before anything else
         // Reset errors first
@@ -294,6 +332,7 @@ function Recipes() {
 
         if (lookupError) {
             console.error('Failed to look up the ingredient:', lookupError);
+            showError("Couldn't add that ingredient. Try again.");
             return;
         }
 
@@ -320,6 +359,7 @@ function Recipes() {
 
             if (createError) {
                 console.error("Insert error:", createError.message);
+                showError("Couldn't add that ingredient. Try again.");
                 return;
             }
             ingredientId = newIng.id;
@@ -341,7 +381,7 @@ function Recipes() {
         setSelectedUnit('g');
         setLastSelectedFood(null);
         setErrors({ name: false, amount: false });
-        setDeleteError(null);
+        setActionStatus(null);
         setType(recipe.type || '');
         setDescription(recipe.description || '');
         setBaseServings(recipe.base_servings || 1);
@@ -436,6 +476,7 @@ function Recipes() {
                                 onChange={(e) => {
                                     setTitle(e.target.value);
                                     if (titleError) setTitleError(false);
+                                    if (createError) setCreateError(null);
                                 }}
                                 placeholder="Recipe Title (e.g. Pasta)"
                             />
@@ -457,6 +498,10 @@ function Recipes() {
 
                         {titleError && (
                             <p className="text-red-500 text-[10px] font-bold mt-2 ml-1">⚠️ Give the recipe a title first</p>
+                        )}
+
+                        {createError && (
+                            <p className="text-red-600 text-xs font-bold mt-2 ml-1">{createError}</p>
                         )}
                     </div>
 
@@ -509,8 +554,21 @@ function Recipes() {
                                         </div>
                                     </div>
 
-                                    {deleteError && (
-                                        <p className="text-red-600 text-xs font-bold mb-4">{deleteError}</p>
+                                    {actionStatus && (
+                                        <div className={`flex items-center justify-between gap-3 mb-4 px-4 py-2 rounded-lg text-xs font-bold ${
+                                            actionStatus.kind === 'success'
+                                                ? 'bg-emerald-50 text-emerald-700'
+                                                : 'bg-red-50 text-red-700'
+                                        }`}>
+                                            <span>{actionStatus.message}</span>
+                                            <button
+                                                aria-label="Dismiss message"
+                                                onClick={() => setActionStatus(null)}
+                                                className="opacity-50 hover:opacity-100"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
                                     )}
 
                                     {/* Nutrition Box */}
