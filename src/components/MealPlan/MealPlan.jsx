@@ -40,6 +40,26 @@ function MealPlan() {
         fetchPermanentList();
     }, []);
 
+    // Recipes are edited in a sibling section that is mounted at the same time as
+    // this one, so there is no navigation event to refresh on. Listen to the table
+    // instead and pull a fresh list whenever a recipe is added, renamed or deleted.
+    useEffect(() => {
+        // A unique topic per mount: React StrictMode mounts twice in dev, and the
+        // second join would otherwise collide with the first one still closing.
+        const channel = supabase
+            .channel(`meal-plan-recipes-${Math.random().toString(36).slice(2)}`)
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'recipes' },
+                () => fetchRecipes()
+            )
+            .subscribe();
+
+        // unsubscribe() drops just this topic. removeChannel() would disconnect the
+        // whole socket, which kills the join still in flight from the first mount.
+        return () => { channel.unsubscribe(); };
+    }, []);
+
     useEffect(() => {
         if (recipes.length > 0) {
             loadSavedPlan();
