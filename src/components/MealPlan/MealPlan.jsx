@@ -144,14 +144,17 @@ function MealPlan() {
     }
 
     // --- SHOPPING LIST LOGIC ---
+    // Shopping list items belong to a week only by their created_at stamp, so every
+    // query against the table has to use these same bounds. Keep them in one place.
+    const weekRange = () => [weekDates[0], `${weekDates[6]}T23:59:59`];
+
     async function fetchPermanentList() {
-        const firstDay = weekDates[0];
-        const lastDay = weekDates[6];
+        const [firstDay, lastDay] = weekRange();
         const { data } = await supabase
             .from('shopping_list')
             .select('*')
             .gte('created_at', firstDay)
-            .lte('created_at', `${lastDay}T23:59:59`)
+            .lte('created_at', lastDay)
             .order('created_at', { ascending: false });
         if (data) setPermanentList(data);
     }
@@ -507,10 +510,21 @@ function MealPlan() {
                         {permanentList.length > 0 && (
                             <button
                                 onClick={async () => {
-                                    if(window.confirm("Delete all items?")) {
-                                        await supabase.from('shopping_list').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-                                        fetchPermanentList();
+                                    const weekLabel = new Date(weekDates[0] + 'T00:00:00').toLocaleDateString();
+                                    if (!window.confirm(`Delete all ${permanentList.length} items for the week of ${weekLabel}?`)) return;
+
+                                    const [firstDay, lastDay] = weekRange();
+                                    const { error } = await supabase
+                                        .from('shopping_list')
+                                        .delete()
+                                        .gte('created_at', firstDay)
+                                        .lte('created_at', lastDay);
+
+                                    if (error) {
+                                        console.error(error);
+                                        return alert("Failed to clear the list: " + error.message);
                                     }
+                                    fetchPermanentList();
                                 }}
                                 className="w-full mt-8 py-3 text-[10px] font-black text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl uppercase tracking-widest transition-all border border-transparent hover:border-red-100"
                             >
