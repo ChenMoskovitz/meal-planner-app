@@ -1,7 +1,7 @@
 from playwright.sync_api import Page, expect
 
 
-def test_shopping_manager_section_is_visible(page: Page, signed_up_user):
+def test_shopping_manager_section_is_visible(page: Page, signed_in_user):
     # Main section
     expect(
         page.get_by_role("heading", name="🛒 Shopping Manager")
@@ -31,7 +31,7 @@ def test_shopping_manager_section_is_visible(page: Page, signed_up_user):
     ).to_be_visible()
 
 
-def test_generate_review_without_plan(page: Page, signed_up_user):
+def test_generate_review_without_plan(page: Page, signed_in_user):
 
     def handle_dialog(dialog):
         assert dialog.message == "Add some meals to your plan first!"

@@ -1,7 +1,7 @@
 from playwright.sync_api import Page, expect
 
 
-def test_user_goals_section_is_visible(page: Page, signed_up_user):
+def test_user_goals_section_is_visible(page: Page, signed_in_user):
     expect(
         page.get_by_role("heading", name="🎯 Set Nutritional Targets")
     ).to_be_visible()
@@ -13,7 +13,7 @@ def test_user_goals_section_is_visible(page: Page, signed_up_user):
     expect(page.get_by_role("button", name="Update Targets")).to_be_visible()
 
 
-def test_update_nutrition_goals(page: Page, signed_up_user):
+def test_update_nutrition_goals(page: Page, signed_in_user):
     page.on("console", lambda msg: print("BROWSER:", msg.type, msg.text))
 
     page.get_by_label("Max Calories").fill("2200")
@@ -25,7 +25,7 @@ def test_update_nutrition_goals(page: Page, signed_up_user):
     expect(page.get_by_text("Goals updated successfully! 🚀")).to_be_visible()
 
 
-def test_goals_persist_after_reload(page: Page, signed_up_user):
+def test_goals_persist_after_reload(page: Page, signed_in_user):
     page.get_by_label("Max Calories").fill("2100")
     page.get_by_label("Min Protein").fill("115")
     page.get_by_label("Min Fiber").fill("28")

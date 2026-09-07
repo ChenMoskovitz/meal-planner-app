@@ -6,9 +6,10 @@ on:
   push:
     branches: [main]
 
+# One shared Supabase test account, so runs must not overlap.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
 
 jobs:
   playwright:
@@ -22,6 +23,8 @@ jobs:
       VITE_EDAMAM_FOOD_KEY: ${{ secrets.VITE_EDAMAM_FOOD_KEY }}
       VITE_EDAMAM_APP_ID: ${{ secrets.VITE_EDAMAM_APP_ID }}
       VITE_EDAMAM_APP_KEY: ${{ secrets.VITE_EDAMAM_APP_KEY }}
+      TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+      TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
 
     steps:
       - uses: actions/checkout@v4
