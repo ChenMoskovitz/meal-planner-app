@@ -1,14 +1,14 @@
 from playwright.sync_api import Page, expect
-import time
+import uuid
 
 
-def test_recipes_section_is_visible(page: Page, signed_up_user):
+def test_recipes_section_is_visible(page: Page, signed_in_user):
     expect(page.get_by_text("My Recipes")).to_be_visible()
     expect(page.get_by_placeholder("Recipe Title (e.g. Pasta)")).to_be_visible()
     expect(page.get_by_role("button", name="Create Recipe")).to_be_visible()
 
-def test_create_recipe(page: Page, signed_up_user):
-    recipe_name = f"Recipe {int(time.time())}"
+def test_create_recipe(page: Page, signed_in_user):
+    recipe_name = f"Recipe {uuid.uuid4()}"
 
     # Fill recipe name
     page.get_by_placeholder("Recipe Title (e.g. Pasta)").fill(recipe_name)
@@ -19,8 +19,8 @@ def test_create_recipe(page: Page, signed_up_user):
     # Verify the recipe appears
     expect(page.get_by_text(recipe_name)).to_be_visible()
 
-def test_select_recipe(page: Page, signed_up_user):
-    recipe_name = f"Recipe {int(time.time())}"
+def test_select_recipe(page: Page, signed_in_user):
+    recipe_name = f"Recipe {uuid.uuid4()}"
 
     # Create recipe
     page.get_by_placeholder("Recipe Title (e.g. Pasta)").fill(recipe_name)
@@ -37,8 +37,8 @@ def test_select_recipe(page: Page, signed_up_user):
         page.get_by_role("heading", name=recipe_name)
     ).to_be_visible()
 
-def test_add_cooking_instructions(page: Page, signed_up_user):
-    recipe_name = f"Recipe {int(time.time())}"
+def test_add_cooking_instructions(page: Page, signed_in_user):
+    recipe_name = f"Recipe {uuid.uuid4()}"
     instructions = "Boil water. Add pasta. Cook for 10 minutes."
 
     # Create recipe
@@ -59,9 +59,9 @@ def test_add_cooking_instructions(page: Page, signed_up_user):
         page.get_by_placeholder("Write your recipe steps here...")
     ).to_have_value(instructions)
 
-def test_save_recipe_changes(page: Page, signed_up_user):
+def test_save_recipe_changes(page: Page, signed_in_user):
     page.on("console", lambda msg: print("BROWSER:", msg.type, msg.text))
-    recipe_name = f"Recipe {int(time.time())}"
+    recipe_name = f"Recipe {uuid.uuid4()}"
     instructions = "Boil water. Add pasta. Cook for 10 minutes."
 
     # Create recipe
