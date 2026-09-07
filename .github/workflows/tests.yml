@@ -1,0 +1,65 @@
+name: Tests
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      VITE_EDAMAM_FOOD_ID: ${{ secrets.VITE_EDAMAM_FOOD_ID }}
+      VITE_EDAMAM_FOOD_KEY: ${{ secrets.VITE_EDAMAM_FOOD_KEY }}
+      VITE_EDAMAM_APP_ID: ${{ secrets.VITE_EDAMAM_APP_ID }}
+      VITE_EDAMAM_APP_KEY: ${{ secrets.VITE_EDAMAM_APP_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: tests/requirements.txt
+
+      - run: pip install -r tests/requirements.txt
+
+      - run: playwright install --with-deps chromium
+
+      - name: Start dev server
+        run: npm run dev > /tmp/vite.log 2>&1 &
+
+      - name: Wait for dev server
+        run: |
+          for i in {1..60}; do
+            curl -sf http://localhost:5173 > /dev/null && echo "dev server up" && exit 0
+            sleep 1
+          done
+          echo "dev server never came up:"
+          cat /tmp/vite.log
+          exit 1
+
+      - name: Run tests
+        run: pytest tests/ -v --screenshot=only-on-failure --tracing=retain-on-failure
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results
+          path: test-results/
+          retention-days: 7
