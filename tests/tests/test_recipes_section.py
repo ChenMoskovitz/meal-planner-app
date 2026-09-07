@@ -77,12 +77,8 @@ def test_save_recipe_changes(page: Page, signed_up_user):
     ).fill(instructions)
 
     # Save and wait until the DB update finished
-    with page.expect_event("dialog") as dialog_info:
-        page.get_by_role("button", name="Save Changes").click()
-
-    dialog = dialog_info.value
-    assert dialog.message == "Updated!"
-    dialog.accept()
+    page.get_by_role("button", name="Save Changes").click()
+    expect(page.get_by_text("Recipe saved.")).to_be_visible()
 
     # Close the recipe
     page.get_by_role("button", name="Close selected recipe").click()
