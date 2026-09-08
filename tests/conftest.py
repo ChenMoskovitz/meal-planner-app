@@ -85,21 +85,77 @@ def clean_account(test_user):
         )
 
 
-@pytest.fixture
-def signed_in_user(page: Page, test_user):
-    """Log the browser in as the shared account, landing on the meal plan."""
-    page.goto(BASE_URL)
+@pytest.fixture(scope="session")
+def auth_storage(browser, test_user):
+    """Sign in through the UI once and keep the resulting localStorage.
 
+    Every test used to drive the login form itself, so a run made roughly
+    fifteen sign-in requests and tripped Supabase's auth rate limit. Signing
+    in once and replaying the stored session costs one.
+    """
+    context = browser.new_context()
+    page = context.new_page()
+
+    page.goto(BASE_URL)
     page.get_by_placeholder("you@example.com").fill(test_user["email"])
     page.get_by_placeholder("••••••••").fill(test_user["password"])
     page.get_by_role("button", name="Sign In").click()
 
-    # Wait until login really finished
+    # Generous, because this is the one request that waits on Supabase auth.
+    expect(
+        page.get_by_role("heading", name="📅 Weekly Dinner Plan")
+    ).to_be_visible(timeout=60_000)
+
+    state = context.storage_state()
+    context.close()
+
+    origins = [o for o in state["origins"] if o["origin"].startswith(BASE_URL)]
+    assert origins, "Signed in but captured no localStorage for the app origin."
+
+    return origins[0]["localStorage"]
+
+
+@pytest.fixture
+def signed_in_user(page: Page, test_user, auth_storage):
+    """Hand the browser the shared account's session, without signing in."""
+    page.goto(BASE_URL)
+
+    # supabase-js reads its session from localStorage on load, so seeding the
+    # entries and reloading lands us logged in with no auth request at all.
+    page.evaluate(
+        "entries => entries.forEach(e => localStorage.setItem(e.name, e.value))",
+        auth_storage
+    )
+    page.reload()
+
     expect(
         page.get_by_role("heading", name="📅 Weekly Dinner Plan")
     ).to_be_visible()
 
     return test_user["email"]
+
+
+@pytest.fixture
+def signed_up_user(page: Page, new_user_email):
+    """Sign up a throwaway user for tests that must sign *out*.
+
+    App.jsx calls supabase.auth.signOut() without a scope, and Supabase
+    defaults to global — it revokes every session for that user, including
+    the one auth_storage captured. Logging out of a throwaway account keeps
+    the shared session alive for the rest of the run.
+    """
+    page.goto(BASE_URL)
+    page.get_by_role("button", name="Sign Up").click()
+
+    page.get_by_placeholder("you@example.com").fill(new_user_email)
+    page.get_by_placeholder("••••••••").fill("Password123!")
+    page.get_by_role("button", name="Sign Up").click()
+
+    expect(
+        page.get_by_role("heading", name="📅 Weekly Dinner Plan")
+    ).to_be_visible(timeout=60_000)
+
+    return new_user_email
 
 
 @pytest.fixture

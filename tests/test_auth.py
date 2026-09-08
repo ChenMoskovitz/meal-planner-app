@@ -88,9 +88,9 @@ def test_sign_up_with_new_user(page: Page, new_user_email):
     ).to_be_visible()
     expect(page.get_by_text(email.upper())).to_be_visible()
 
-def test_logout(page: Page, signed_in_user):
+def test_logout(page: Page, signed_up_user):
     # Verify login
-    expect(page.get_by_text(signed_in_user.upper())).to_be_visible()
+    expect(page.get_by_text(signed_up_user.upper())).to_be_visible()
 
     # Logout
     page.get_by_role("button", name="Logout").click()
