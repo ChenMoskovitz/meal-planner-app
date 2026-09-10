@@ -12,6 +12,25 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Fast feedback: no browser, no database, no secrets. Runs alongside the
+  # Playwright job rather than inside it, so a throttled Supabase can't hide
+  # a broken calculation.
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm test
+
   playwright:
     runs-on: ubuntu-latest
     timeout-minutes: 15
