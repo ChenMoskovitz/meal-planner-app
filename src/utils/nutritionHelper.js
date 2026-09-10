@@ -46,9 +46,24 @@ export async function getRecipeNutrition(recipeId) {
 
     if (!ingredientsData) return null;
 
-    // The key change is adding "/ 100" to account for the Edamam "per 100g" standard
-    const totalNutrition = ingredientsData.reduce((acc, item) => {
+    return perServing(
+        sumIngredientNutrition(ingredientsData),
+        recipeData?.base_servings
+    );
+}
+
+/**
+ * Totals the nutrition of recipe_ingredients rows.
+ *
+ * The *_per_unit columns hold Edamam's per-100g figures, so every amount is
+ * divided by 100. Split out from getRecipeNutrition so the arithmetic can be
+ * tested without a database.
+ */
+export function sumIngredientNutrition(rows) {
+    return rows.reduce((acc, item) => {
         const ing = item.ingredients;
+        if (!ing) return acc;
+
         const amount = item.amount || 0;
 
         return {
@@ -58,14 +73,20 @@ export async function getRecipeNutrition(recipeId) {
             fiber: acc.fiber + (amount * (ing.fiber_per_unit || 0)) / 100
         };
     }, { calories: 0, protein: 0, fat: 0, fiber: 0 });
+}
 
-    const servings = recipeData?.base_servings || 1;
+/**
+ * Divides a recipe's totals across its servings.
+ * A missing or zero serving count falls back to 1 portion.
+ */
+export function perServing(totals, servings) {
+    const divisor = servings || 1;
 
     return {
-        calories: totalNutrition.calories / servings,
-        protein: totalNutrition.protein / servings,
-        fat: totalNutrition.fat / servings,
-        fiber: totalNutrition.fiber / servings
+        calories: totals.calories / divisor,
+        protein: totals.protein / divisor,
+        fat: totals.fat / divisor,
+        fiber: totals.fiber / divisor
     };
 }
 
