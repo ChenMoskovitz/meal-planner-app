@@ -133,7 +133,17 @@ function MealPlan() {
                 loadedPlan[day][row.slot_type] = recipe;
             }
         });
-        setPlan(prev => ({ ...prev, ...loadedPlan }));
+        // Browsing to another week re-runs this, so a plain merge would pile every
+        // week visited this session into one object. Drop the other weeks first, but
+        // keep this week's unsaved days: `recipes` is a dependency of the effect that
+        // calls this, and any edit in the sibling recipe panel re-fires it.
+        setPlan(prev => {
+            const currentWeek = {};
+            for (const date of weekDates) {
+                if (prev[date]) currentWeek[date] = prev[date];
+            }
+            return { ...currentWeek, ...loadedPlan };
+        });
     }
 
     function addComponentToDay(day, typeKey, specificType) {
@@ -190,7 +200,9 @@ function MealPlan() {
 // 1. Get all ingredients for the planned meals (Step 2 of your strategy)
     async function getWeeklyIngredients() {
         const recipeIds = [];
-        Object.values(plan).forEach(day => {
+        // Only the week on screen: `plan` can still hold days outside it.
+        weekDates.forEach(dateStr => {
+            const day = plan[dateStr];
             if (day?.main) recipeIds.push(day.main.id);
             if (day?.side) recipeIds.push(day.side.id);
             if (day?.veg) recipeIds.push(day.veg.id);
