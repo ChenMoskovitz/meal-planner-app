@@ -1,4 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+// nutritionHelper imports the Supabase client, and that module calls
+// createClient() at import time. The unit CI job runs without secrets, so the
+// real client throws "supabaseUrl is required." before any test can run. Only
+// getMultiRecipeNutrition touches the database and nothing here calls it, so a
+// bare stub is enough to keep the import graph loadable.
+vi.mock('../config/supabaseClient.js', () => ({ supabase: {} }));
+
 import {
     formatIngredientNutrition,
     sumIngredientNutrition,
