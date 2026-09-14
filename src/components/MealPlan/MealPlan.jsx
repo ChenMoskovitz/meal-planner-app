@@ -75,6 +75,14 @@ function MealPlan() {
         }
     }, [weekDates, recipes]);
 
+    // The generated review belongs to the week it came from. Drop it on navigation
+    // so last week's ingredients don't sit under the new week's plan. Keyed on
+    // weekDates alone: the effect above also fires on recipe edits, which would
+    // clear a review mid-use.
+    useEffect(() => {
+        setShoppingList([]);
+    }, [weekDates]);
+
     useEffect(() => {
         async function calculateAllDays() {
             const newDailyTotals = {};
@@ -208,7 +216,10 @@ function MealPlan() {
             if (day?.veg) recipeIds.push(day.veg.id);
         });
 
-        if (recipeIds.length === 0) return alert("Add some meals to your plan first!");
+        if (recipeIds.length === 0) {
+            setShoppingList([]);
+            return alert("Add some meals to your plan first!");
+        }
 
         const { data, error } = await supabase
             .from('recipe_ingredients')
