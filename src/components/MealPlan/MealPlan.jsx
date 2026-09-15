@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../config/supabaseClient.js';
 import { getMultiRecipeNutrition } from '../../utils/nutritionHelper.js';
+import { batchesFor, sumWeeklyIngredients, roundAmount } from '../../utils/shoppingList.js';
 
 function MealPlan() {
     // --- 1. Helper Logic for Dates ---
@@ -207,39 +208,46 @@ function MealPlan() {
 
 // 1. Get all ingredients for the planned meals (Step 2 of your strategy)
     async function getWeeklyIngredients() {
-        const recipeIds = [];
+        // One entry per planned slot, not per recipe: the same recipe on two days
+        // is cooked twice, and each occasion is scaled on its own base_servings.
+        const occurrences = [];
+        const addSlot = (recipe) => {
+            if (!recipe) return;
+            occurrences.push({
+                recipeId: recipe.id,
+                batches: batchesFor(globalPlannedServings, recipe.base_servings)
+            });
+        };
+
         // Only the week on screen: `plan` can still hold days outside it.
         weekDates.forEach(dateStr => {
             const day = plan[dateStr];
-            if (day?.main) recipeIds.push(day.main.id);
-            if (day?.side) recipeIds.push(day.side.id);
-            if (day?.veg) recipeIds.push(day.veg.id);
+            addSlot(day?.main);
+            addSlot(day?.side);
+            addSlot(day?.veg);
         });
 
-        if (recipeIds.length === 0) {
+        if (occurrences.length === 0) {
             setShoppingList([]);
             return alert("Add some meals to your plan first!");
         }
 
+        // recipe_id comes back so the rows can be matched to the slot that planned
+        // them; the ids are deduped because one query covers every occurrence.
+        const recipeIds = [...new Set(occurrences.map(o => o.recipeId))];
         const { data, error } = await supabase
             .from('recipe_ingredients')
-            .select(`amount, ingredients:ingredient_id (name, unit_type)`)
+            .select(`recipe_id, amount, ingredients:ingredient_id (name, unit_type)`)
             .in('recipe_id', recipeIds);
 
         if (error) return console.error(error);
 
         // Group ingredients so "Onion" doesn't appear 5 times
-        const totals = data.reduce((acc, item) => {
-            if (!item.ingredients) return acc;
-            const name = item.ingredients.name;
-            if (!acc[name]) acc[name] = { amount: 0, unit: item.ingredients.unit_type || '' };
-            acc[name].amount += (item.amount || 0);
-            return acc;
-        }, {});
+        const totals = sumWeeklyIngredients(occurrences, data);
 
         setShoppingList(Object.entries(totals).map(([name, info]) => ({
             name,
-            display: `${info.amount}${info.unit} ${name}`
+            display: `${roundAmount(info.amount)}${info.unit} ${name}`
         })));
     }
 
