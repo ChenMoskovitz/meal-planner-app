@@ -251,16 +251,26 @@ function MealPlan() {
         })));
     }
 
+    // Re-adding an ingredient that is already on this week's list (e.g. after the
+    // plan changed and its quantity went up) updates that row instead of
+    // inserting a second "Oil" next to the old one. permanentList is already
+    // scoped to the week on screen, so a name match there is the right row.
     async function addToPermanentList(itemName, amount) {
-        const targetDate = weekDates[1];
-        const { error } = await supabase
-            .from('shopping_list')
-            .insert([{
-                item_name: itemName,
-                amount: amount,
-                is_bought: false,
-                created_at: new Date(targetDate).toISOString()
-            }]);
+        const existing = permanentList.find(item => item.item_name === itemName);
+
+        const { error } = existing
+            ? await supabase
+                .from('shopping_list')
+                .update({ amount: amount })
+                .eq('id', existing.id)
+            : await supabase
+                .from('shopping_list')
+                .insert([{
+                    item_name: itemName,
+                    amount: amount,
+                    is_bought: false,
+                    created_at: new Date(weekDates[1]).toISOString()
+                }]);
         if (!error) fetchPermanentList();
     }
 
