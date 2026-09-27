@@ -2,12 +2,16 @@ from playwright.sync_api import Page, expect
 import uuid
 
 
-def test_recipes_section_is_visible(page: Page, signed_in_user):
+def test_recipes_section_is_visible(page: Page, visit):
+    visit("/recipes")
+
     expect(page.get_by_text("My Recipes")).to_be_visible()
     expect(page.get_by_placeholder("Recipe Title (e.g. Pasta)")).to_be_visible()
     expect(page.get_by_role("button", name="Create Recipe")).to_be_visible()
 
-def test_create_recipe(page: Page, signed_in_user):
+def test_create_recipe(page: Page, visit):
+    visit("/recipes")
+
     recipe_name = f"Recipe {uuid.uuid4()}"
 
     # Fill recipe name
@@ -19,7 +23,9 @@ def test_create_recipe(page: Page, signed_in_user):
     # Verify the recipe appears
     expect(page.get_by_text(recipe_name)).to_be_visible()
 
-def test_select_recipe(page: Page, signed_in_user):
+def test_select_recipe(page: Page, visit):
+    visit("/recipes")
+
     recipe_name = f"Recipe {uuid.uuid4()}"
 
     # Create recipe
@@ -37,7 +43,9 @@ def test_select_recipe(page: Page, signed_in_user):
         page.get_by_role("heading", name=recipe_name)
     ).to_be_visible()
 
-def test_add_cooking_instructions(page: Page, signed_in_user):
+def test_add_cooking_instructions(page: Page, visit):
+    visit("/recipes")
+
     recipe_name = f"Recipe {uuid.uuid4()}"
     instructions = "Boil water. Add pasta. Cook for 10 minutes."
 
@@ -59,7 +67,9 @@ def test_add_cooking_instructions(page: Page, signed_in_user):
         page.get_by_placeholder("Write your recipe steps here...")
     ).to_have_value(instructions)
 
-def test_save_recipe_changes(page: Page, signed_in_user):
+def test_save_recipe_changes(page: Page, visit):
+    visit("/recipes")
+
     page.on("console", lambda msg: print("BROWSER:", msg.type, msg.text))
     recipe_name = f"Recipe {uuid.uuid4()}"
     instructions = "Boil water. Add pasta. Cook for 10 minutes."

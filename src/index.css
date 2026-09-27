@@ -3,3 +3,15 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* A horizontally scrollable row that should not show a scrollbar track. The nav
+   tabs fit without scrolling on a desktop, so the track is visible but does
+   nothing; on a narrow screen the row is still swipeable. */
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}

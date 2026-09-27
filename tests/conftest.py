@@ -136,6 +136,20 @@ def signed_in_user(page: Page, test_user, auth_storage):
 
 
 @pytest.fixture
+def visit(page: Page, signed_in_user):
+    """Open one of the app's routes, already signed in.
+
+    Every section used to render on one page, so a test could assert against any
+    of them straight after signing in. Each section is its own route now, and
+    going there by URL is cheaper and less brittle than clicking a tab.
+    """
+    def _visit(path):
+        page.goto(f"{BASE_URL}{path}")
+
+    return _visit
+
+
+@pytest.fixture
 def signed_up_user(page: Page, new_user_email):
     """Sign up a throwaway user for tests that must sign *out*.
 
