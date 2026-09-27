@@ -3,6 +3,8 @@ import { supabase } from '../../config/supabaseClient.js';
 import { getMultiRecipeNutrition } from '../../utils/nutritionHelper.js';
 import { batchesFor, sumWeeklyIngredients, roundAmount } from '../../utils/shoppingList.js';
 import { getSundayOfCurrentWeek, toLocalDateString, getWeekDaysFromSunday } from '../../utils/weekDates.js';
+import { useToast } from '../common/ToastProvider.jsx';
+import { useConfirm } from '../common/ConfirmProvider.jsx';
 
 function MealPlan() {
     // --- 1. Helper Logic for Dates ---
@@ -21,6 +23,8 @@ function MealPlan() {
     const [showWeeklyStats, setShowWeeklyStats] = useState(false);
     const [globalPlannedServings, setGlobalPlannedServings] = useState(2);
     const [nutritionalGoals, setNutritionalGoals] = useState(null);
+    const { showSuccess, showError } = useToast();
+    const confirm = useConfirm();
 
     // --- 3. Effects ---
     useEffect(() => {
@@ -166,8 +170,8 @@ function MealPlan() {
             }
             await supabase.from('plan_recipes').delete().in('day_of_week', weekDates);
             await supabase.from('plan_recipes').insert(rowsToInsert);
-            alert("Weekly Plan Saved! 🚀");
-        } catch (error) { alert("Failed to save: " + error.message); }
+            showSuccess("Weekly plan saved.");
+        } catch (error) { showError("Failed to save: " + error.message); }
     }
 
     // --- SHOPPING LIST LOGIC ---
@@ -209,7 +213,7 @@ function MealPlan() {
 
         if (occurrences.length === 0) {
             setShoppingList([]);
-            return alert("Add some meals to your plan first!");
+            return showError("Add some meals to your plan first!");
         }
 
         // recipe_id comes back so the rows can be matched to the slot that planned
@@ -560,7 +564,13 @@ function MealPlan() {
                             <button
                                 onClick={async () => {
                                     const weekLabel = new Date(weekDates[0] + 'T00:00:00').toLocaleDateString();
-                                    if (!window.confirm(`Delete all ${permanentList.length} items for the week of ${weekLabel}?`)) return;
+                                    const confirmed = await confirm({
+                                        title: 'Clear the shopping list?',
+                                        message: `All ${permanentList.length} items for the week of ${weekLabel} will be removed.`,
+                                        confirmLabel: 'Clear list',
+                                        destructive: true
+                                    });
+                                    if (!confirmed) return;
 
                                     const [firstDay, lastDay] = weekRange();
                                     const { error } = await supabase
@@ -571,7 +581,7 @@ function MealPlan() {
 
                                     if (error) {
                                         console.error(error);
-                                        return alert("Failed to clear the list: " + error.message);
+                                        return showError("Failed to clear the list: " + error.message);
                                     }
                                     fetchPermanentList();
                                 }}

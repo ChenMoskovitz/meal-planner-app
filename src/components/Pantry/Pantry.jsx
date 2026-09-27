@@ -3,6 +3,7 @@ import { supabase } from '../../config/supabaseClient.js';
 import fetchNutrition from '../../utils/apiTest.js';
 import { formatIngredientNutrition } from '../../utils/nutritionHelper.js';
 import IngredientSearch from "../IngredientSearch.jsx";
+import { useToast } from '../common/ToastProvider.jsx';
 
 function Pantry() {
     const [name, setName] = useState('');
@@ -10,6 +11,7 @@ function Pantry() {
     const [ingredients, setIngredients] = useState([]);
     const [unitType, setUnitType] = useState('g');
     const [isVisible, setIsVisible] = useState(true);
+    const { showSuccess } = useToast();
 
     useEffect(() => {
         fetchIngredients();
@@ -68,9 +70,9 @@ function Pantry() {
                 .eq('id', item.id);
 
             if (!error) {
-                // Display only: the alert reports a single unit, not the stored scale.
+                // Display only: the message reports a single unit, not the stored scale.
                 const perUnit = formatIngredientNutrition(apiNutrients);
-                alert(`Updated! 1${unitType} of ${item.name} is ${perUnit.calories.toFixed(4)} kcal.`);
+                showSuccess(`Updated! 1${unitType} of ${item.name} is ${perUnit.calories.toFixed(4)} kcal.`);
                 fetchIngredients();
             }
         }
