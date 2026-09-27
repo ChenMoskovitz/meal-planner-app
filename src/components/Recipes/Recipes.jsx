@@ -2,6 +2,8 @@ import React, {useState, useEffect, useRef} from 'react';
 import {supabase} from '../../config/supabaseClient.js';
 import { getRecipeNutrition } from '../../utils/nutritionHelper.js';
 import IngredientSearch from '../IngredientSearch';
+import { useToast } from '../common/ToastProvider.jsx';
+import { useConfirm } from '../common/ConfirmProvider.jsx';
 
 const IMAGE_BUCKET = 'recipe-images';
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -41,11 +43,10 @@ function Recipes() {
     const unitLookupRef = useRef(0);
     const [imageError, setImageError] = useState(null);
     const [selectedUnit, setSelectedUnit] = useState('g');
-    const [actionStatus, setActionStatus] = useState(null); // { kind: 'success' | 'error', message }
     const [createError, setCreateError] = useState(null);
 
-    const showError = (message) => setActionStatus({ kind: 'error', message });
-    const showSuccess = (message) => setActionStatus({ kind: 'success', message });
+    const { showSuccess, showError } = useToast();
+    const confirm = useConfirm();
 
     const RECIPE_TYPES = [
         { value: 'full_meal', label: 'Full Meal' },
@@ -101,8 +102,6 @@ function Recipes() {
     }
 
     async function addIngredientToRecipe(ingredientId) {
-        setActionStatus(null);
-
         // Already in this recipe? Add to the existing amount rather than creating
         // a second row, the same way Pantry.jsx merges repeat quantities.
         const { data: existing, error: lookupError } = await supabase
@@ -197,8 +196,6 @@ function Recipes() {
 
     async function saveIngredientAmount(ingredientId, rawValue) {
         setEditingIngredientId(null);
-        setActionStatus(null);
-
         // Escape sets this so the blur that follows doesn't save anyway.
         if (cancelAmountEditRef.current) {
             cancelAmountEditRef.current = false;
@@ -229,8 +226,6 @@ function Recipes() {
     }
 
     async function removeIngredientFromRecipe(ingredientId) {
-        setActionStatus(null);
-
         const { error } = await supabase
             .from('recipe_ingredients')
             .delete()
@@ -250,8 +245,6 @@ function Recipes() {
 
     async function updateRecipe() {
         if (!selectedRecipe) return;
-        setActionStatus(null);
-
         const trimmedName = editName.trim();
         if (!trimmedName) {
             setNameError(true);
@@ -285,9 +278,13 @@ function Recipes() {
 
     async function deleteRecipe(recipeId) {
         const recipe = recipes.find(r => r.id === recipeId);
-        if (!window.confirm(`Delete "${recipe?.name || 'this recipe'}"? This can't be undone.`)) return;
-
-        setActionStatus(null);
+        const confirmed = await confirm({
+            title: `Delete "${recipe?.name || 'this recipe'}"?`,
+            message: "This can't be undone.",
+            confirmLabel: 'Delete',
+            destructive: true
+        });
+        if (!confirmed) return;
 
         const { error } = await supabase.from('recipes').delete().eq('id', recipeId);
 
@@ -310,8 +307,6 @@ function Recipes() {
 
     async function handleApiIngredientSelect(food) {
         if (!selectedRecipe) return;
-        setActionStatus(null);
-
         // 1. THE GUARD: Check validation before anything else
         // Reset errors first
         setErrors({ name: false, amount: false });
@@ -381,7 +376,6 @@ function Recipes() {
         setSelectedUnit('g');
         setLastSelectedFood(null);
         setErrors({ name: false, amount: false });
-        setActionStatus(null);
         setType(recipe.type || '');
         setDescription(recipe.description || '');
         setBaseServings(recipe.base_servings || 1);
@@ -553,23 +547,6 @@ function Recipes() {
                                             </button>
                                         </div>
                                     </div>
-
-                                    {actionStatus && (
-                                        <div className={`flex items-center justify-between gap-3 mb-4 px-4 py-2 rounded-lg text-xs font-bold ${
-                                            actionStatus.kind === 'success'
-                                                ? 'bg-emerald-50 text-emerald-700'
-                                                : 'bg-red-50 text-red-700'
-                                        }`}>
-                                            <span>{actionStatus.message}</span>
-                                            <button
-                                                aria-label="Dismiss message"
-                                                onClick={() => setActionStatus(null)}
-                                                className="opacity-50 hover:opacity-100"
-                                            >
-                                                ✕
-                                            </button>
-                                        </div>
-                                    )}
 
                                     {/* Nutrition Box */}
                                     {selectedNutrition && (

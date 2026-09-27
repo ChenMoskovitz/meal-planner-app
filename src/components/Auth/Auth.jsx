@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { supabase } from '../../config/supabaseClient'
+import { useToast } from '../common/ToastProvider.jsx'
 
 export default function Auth() {
     const [loading, setLoading] = useState(false)
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [isSignUp, setIsSignUp] = useState(false)
+    const { showSuccess, showError } = useToast()
 
     const handleAuth = async (e) => {
         e.preventDefault()
@@ -17,9 +19,9 @@ export default function Auth() {
             : await supabase.auth.signInWithPassword({ email, password })
 
         if (error) {
-            alert(error.message)
+            showError(error.message)
         } else if (isSignUp) {
-            alert('Check your email for the confirmation link! (Or check Supabase dashboard if you turned off confirmation)')
+            showSuccess('Check your email for the confirmation link!')
         }
         setLoading(false)
     }

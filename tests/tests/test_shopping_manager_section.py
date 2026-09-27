@@ -32,14 +32,15 @@ def test_shopping_manager_section_is_visible(page: Page, signed_in_user):
 
 
 def test_generate_review_without_plan(page: Page, signed_in_user):
-
-    def handle_dialog(dialog):
-        assert dialog.message == "Add some meals to your plan first!"
-        dialog.accept()
-
-    page.once("dialog", handle_dialog)
-
+    # The message used to be a native alert(), caught with page.once("dialog").
+    # It is an in-app toast now, so it is asserted like any other element.
     page.get_by_role(
         "button",
         name="🔍 1. Generate Review from Plan"
     ).click()
+
+    expect(
+        page.get_by_role("status").filter(
+            has_text="Add some meals to your plan first!"
+        )
+    ).to_be_visible()

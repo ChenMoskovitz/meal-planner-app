@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../../config/supabaseClient.js';
 import { getRecipeNutrition } from '../../utils/nutritionHelper.js';
+import { useToast } from '../common/ToastProvider.jsx';
 
 function Meals() {
     const [suggestion, setSuggestion] = useState(null);
@@ -11,6 +12,7 @@ function Meals() {
         calories: 0, protein: 0, fat: 0, fiber: 0
     });
     const [showNutrition, setShowNutrition] = useState(false);
+    const { showError } = useToast();
 
     async function updateComboTotal(mainId, sideId = null, vegId = null) {
         // Fetch nutrition for all selected parts
@@ -48,7 +50,7 @@ function Meals() {
                 await updateComboTotal(suggestion.id, sideSuggestion?.id, selectedPart.id);
             }
         } else {
-            alert(`No recipes found for type: ${type}`);
+            showError(`No recipes found for type: ${type}`);
         }
     }
 
@@ -76,7 +78,7 @@ function Meals() {
             await updateComboTotal(selected.id, null, null);
 
         } else {
-            alert("No Full Meals or Main Dishes found!");
+            showError("No Full Meals or Main Dishes found!");
         }
 
         setLoading(false);
