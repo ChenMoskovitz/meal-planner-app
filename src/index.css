@@ -1,8 +1,56 @@
 @import "tailwindcss";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/**
+ * Design tokens.
+ *
+ * Tailwind 4 reads its theme from here rather than from tailwind.config.js, and
+ * every name below becomes a utility: --color-accent gives bg-accent,
+ * text-accent, border-accent, and so on.
+ *
+ * The point of naming them by role rather than by hue is that "accent" can be
+ * re-pointed in one place, where "indigo-600" had to be found in 20 files. The
+ * app used indigo-600 before, which is the colour Tailwind's own documentation
+ * uses, so the whole thing looked like a tutorial.
+ */
+@theme {
+    --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --font-display: "Bricolage Grotesque", "Inter", ui-sans-serif, sans-serif;
+
+    /* Warm neutrals: a food app should not be lit like a spreadsheet. */
+    --color-surface: #fdfcfa;
+    --color-card: #ffffff;
+    --color-line: #ebe5dd;
+
+    --color-accent: #c2410c;
+    --color-accent-dark: #9a3412;
+    --color-accent-soft: #fff7ed;
+    --color-accent-line: #ffedd5;
+
+    /* Goal met / falling short / destructive. Kept distinct from the accent so a
+       terracotta button never reads as a status. */
+    --color-good: #15803d;
+    --color-good-dark: #166534;
+    --color-good-soft: #f0fdf4;
+    --color-warn: #d97706;
+    --color-bad: #b91c1c;
+    --color-bad-dark: #991b1b;
+    --color-bad-soft: #fef2f2;
+}
+
+@layer base {
+    body {
+        background-color: var(--color-surface);
+        color: var(--color-stone-900);
+        font-family: var(--font-sans);
+    }
+
+    /* Bricolage Grotesque has a wider, slightly quirky shape that separates a
+       heading from body text without needing a heavier weight. */
+    h1, h2, h3, h4 {
+        font-family: var(--font-display);
+        letter-spacing: -0.02em;
+    }
+}
 
 /* A horizontally scrollable row that should not show a scrollbar track. The nav
    tabs fit without scrolling on a desktop, so the track is visible but does
@@ -14,4 +62,30 @@
 
 .no-scrollbar::-webkit-scrollbar {
     display: none;
+}
+
+/* Referenced by the shopping review and the recipe list, which had been asking
+   for this class before it was ever defined. A 600px scroll area inside a card
+   gets the browser's full-width scrollbar otherwise, which reads as a second
+   border beside the content. */
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--color-line);
+    border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-stone-400);
 }

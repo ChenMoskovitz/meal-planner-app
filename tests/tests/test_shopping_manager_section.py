@@ -4,7 +4,7 @@ from playwright.sync_api import Page, expect
 def test_shopping_manager_section_is_visible(page: Page, signed_in_user):
     # Main section
     expect(
-        page.get_by_role("heading", name="🛒 Shopping Manager")
+        page.get_by_role("heading", name="Shopping Manager")
     ).to_be_visible()
 
     expect(
@@ -13,7 +13,7 @@ def test_shopping_manager_section_is_visible(page: Page, signed_in_user):
 
     # Generate review button
     expect(
-        page.get_by_role("button", name="🔍 1. Generate Review from Plan")
+        page.get_by_role("button", name="Generate Review from Plan")
     ).to_be_visible()
 
     # Empty ingredient review
@@ -23,7 +23,7 @@ def test_shopping_manager_section_is_visible(page: Page, signed_in_user):
 
     # Final list
     expect(
-        page.get_by_role("heading", name="📝 2. Final List")
+        page.get_by_role("heading", name="Final List")
     ).to_be_visible()
 
     expect(
@@ -36,7 +36,7 @@ def test_generate_review_without_plan(page: Page, signed_in_user):
     # It is an in-app toast now, so it is asserted like any other element.
     page.get_by_role(
         "button",
-        name="🔍 1. Generate Review from Plan"
+        name="Generate Review from Plan"
     ).click()
 
     expect(

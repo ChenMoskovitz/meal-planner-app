@@ -449,10 +449,10 @@ function Recipes() {
     }
 
     return (
-        <div className="p-6 bg-white rounded-2xl shadow-sm border border-gray-100">
+        <div className="p-6 bg-white rounded-2xl shadow-sm border border-line">
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 font-black italic underline decoration-indigo-500">My Recipes</h2>
-                <button onClick={() => setIsVisible(!isVisible)} className="text-xs font-bold uppercase tracking-wider text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-3 py-1 rounded-lg transition-colors">
+                <h2 className="text-2xl font-black text-stone-900 tracking-tight">My Recipes</h2>
+                <button onClick={() => setIsVisible(!isVisible)} className="text-xs font-bold uppercase tracking-wider text-accent hover:text-accent-dark bg-accent-soft px-3 py-1 rounded-lg transition-colors">
                     {isVisible ? 'Hide Section ↑' : 'Show Section ↓'}
                 </button>
             </div>
@@ -460,11 +460,11 @@ function Recipes() {
             {isVisible && (
                 <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                     {/* Create Recipe Header */}
-                    <div className="mb-8 p-4 bg-gray-50 rounded-xl border border-gray-200 shadow-sm">
+                    <div className="mb-8 p-4 bg-stone-50 rounded-xl border border-line shadow-sm">
                         <div className="flex gap-3">
                             <input
                                 className={`flex-1 px-4 py-2 border rounded-lg outline-none transition-colors ${
-                                    titleError ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-indigo-500'
+                                    titleError ? 'border-bad bg-bad-soft' : 'border-stone-300 focus:border-accent'
                                 }`}
                                 value={title}
                                 onChange={(e) => {
@@ -476,7 +476,7 @@ function Recipes() {
                             />
                             <select
                                 aria-label="New Recipe Type"
-                                className="px-4 py-2 border border-gray-300 rounded-lg outline-none focus:border-indigo-500 transition-colors bg-white text-gray-700"
+                                className="px-4 py-2 border border-stone-300 rounded-lg outline-none focus:border-accent transition-colors bg-white text-stone-700"
                                 value={newRecipeType}
                                 onChange={(e) => setNewRecipeType(e.target.value)}
                             >
@@ -485,28 +485,28 @@ function Recipes() {
                                     <option key={t.value} value={t.value}>{t.label}</option>
                                 ))}
                             </select>
-                            <button className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg transition-all active:scale-95" onClick={addRecipe}>
+                            <button className="bg-accent hover:bg-accent-dark text-white font-bold py-2 px-6 rounded-lg transition-all active:scale-95" onClick={addRecipe}>
                                 Create Recipe
                             </button>
                         </div>
 
                         {titleError && (
-                            <p className="text-red-500 text-[10px] font-bold mt-2 ml-1">⚠️ Give the recipe a title first</p>
+                            <p className="text-bad text-[10px] font-bold mt-2 ml-1">Give the recipe a title first</p>
                         )}
 
                         {createError && (
-                            <p className="text-red-600 text-xs font-bold mt-2 ml-1">{createError}</p>
+                            <p className="text-bad text-xs font-bold mt-2 ml-1">{createError}</p>
                         )}
                     </div>
 
                     <div className="flex flex-col lg:flex-row gap-8">
                         {/* List Column */}
                         <div className="lg:w-1/3">
-                            <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">Recipe List</h3>
+                            <h3 className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-4">Recipe List</h3>
                             <ul className="space-y-2 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                                 {recipes.map(recipe => (
                                     <li key={recipe.id}
-                                        className={`p-4 rounded-xl border transition-all cursor-pointer hover:shadow-md ${selectedRecipe?.id === recipe.id ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-bold' : 'bg-white border-gray-100'}`}
+                                        className={`p-4 rounded-xl border transition-all cursor-pointer hover:shadow-sm ${selectedRecipe?.id === recipe.id ? 'bg-accent-soft border-accent-line text-accent-dark font-bold' : 'bg-white border-line'}`}
                                         onClick={() => handleSelectRecipe(recipe)}>
                                         {recipe.name}
                                     </li>
@@ -517,31 +517,31 @@ function Recipes() {
                         {/* Detail Column */}
                         <div className="lg:w-2/3 min-h-[400px]">
                             {selectedRecipe ? (
-                                <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-sm animate-in fade-in slide-in-from-right-4">
+                                <div className="p-6 bg-white rounded-2xl border border-line shadow-sm animate-in fade-in slide-in-from-right-4">
                                     <div className="flex justify-between items-center mb-6">
-                                        <h2 className="text-3xl font-black text-gray-900">
+                                        <h2 className="text-3xl font-black text-stone-900">
                                             {selectedRecipe.name}
                                         </h2>
 
                                         <div className="flex gap-2">
                                             <button
                                                 onClick={() => calculateRecipeNutrition(selectedRecipe.id)}
-                                                className="text-xs font-bold bg-indigo-50 text-indigo-600 px-4 py-2 rounded-lg hover:bg-indigo-100 transition-colors"
+                                                className="text-xs font-bold bg-accent-soft text-accent px-4 py-2 rounded-lg hover:bg-accent-line transition-colors"
                                             >
-                                                📊 Nutrition
+                                                Nutrition
                                             </button>
 
                                             <button
                                                 onClick={() => deleteRecipe(selectedRecipe.id)}
-                                                className="text-xs font-bold bg-red-50 text-red-600 px-4 py-2 rounded-lg hover:bg-red-100 transition-colors"
+                                                className="text-xs font-bold bg-bad-soft text-bad px-4 py-2 rounded-lg hover:bg-bad-soft transition-colors"
                                             >
-                                                🗑 Delete
+                                                Delete
                                             </button>
 
                                             <button
                                                 aria-label="Close selected recipe"
                                                 onClick={() => setSelectedRecipe(null)}
-                                                className="text-xs font-bold bg-gray-100 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
+                                                className="text-xs font-bold bg-stone-100 text-stone-600 px-4 py-2 rounded-lg hover:bg-stone-200 transition-colors"
                                             >
                                                 ✕
                                             </button>
@@ -550,12 +550,12 @@ function Recipes() {
 
                                     {/* Nutrition Box */}
                                     {selectedNutrition && (
-                                        <div className="mb-6 p-5 bg-indigo-900 text-white rounded-xl relative shadow-lg animate-in zoom-in-95">
+                                        <div className="mb-6 p-5 bg-stone-900 text-white rounded-xl relative shadow-lg animate-in zoom-in-95">
                                             <div className="grid grid-cols-2 gap-4">
-                                                <p className="text-lg font-bold italic">🔥 <strong>{selectedNutrition.calories.toFixed(0)}</strong> <span className="text-xs font-normal">kcal</span></p>
-                                                <p className="text-lg font-bold italic">💪 <strong>{selectedNutrition.protein.toFixed(1)}</strong> <span className="text-xs font-normal">g Protein</span></p>
-                                                <p className="text-lg font-bold italic">🥑 <strong>{selectedNutrition.fat.toFixed(1)}</strong> <span className="text-xs font-normal">g Fat</span></p>
-                                                <p className="text-lg font-bold italic">🌾 <strong>{selectedNutrition.fiber.toFixed(1)}</strong> <span className="text-xs font-normal">g Fiber</span></p>
+                                                <p className="text-lg font-bold"><strong>{selectedNutrition.calories.toFixed(0)}</strong> <span className="text-xs font-normal">kcal</span></p>
+                                                <p className="text-lg font-bold"><strong>{selectedNutrition.protein.toFixed(1)}</strong> <span className="text-xs font-normal">g Protein</span></p>
+                                                <p className="text-lg font-bold"><strong>{selectedNutrition.fat.toFixed(1)}</strong> <span className="text-xs font-normal">g Fat</span></p>
+                                                <p className="text-lg font-bold"><strong>{selectedNutrition.fiber.toFixed(1)}</strong> <span className="text-xs font-normal">g Fiber</span></p>
                                             </div>
                                             <button className="absolute top-4 right-4 text-xs opacity-50 hover:opacity-100" onClick={() => setSelectedNutrition(null)}>✕</button>
                                         </div>
@@ -563,9 +563,9 @@ function Recipes() {
 
                                     <div className="space-y-6">
                                         {/* Image Box */}
-                                        <div className="p-4 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 flex flex-col items-center">
+                                        <div className="p-4 border-2 border-dashed border-line rounded-xl bg-stone-50 flex flex-col items-center">
                                             {selectedRecipe.image_url && <img src={selectedRecipe.image_url} className="w-full h-48 object-cover rounded-lg mb-4 shadow-sm" alt="Recipe" />}
-                                            <label className="cursor-pointer bg-white border border-gray-200 px-6 py-2 rounded-lg text-xs font-black uppercase tracking-wider shadow-sm hover:bg-gray-50 transition-colors">
+                                            <label className="cursor-pointer bg-white border border-line px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider shadow-sm hover:bg-stone-50 transition-colors">
                                                 {uploadingImage ? 'Uploading...' : 'Upload Photo'}
                                                 <input
                                                     type="file"
@@ -576,17 +576,17 @@ function Recipes() {
                                             </label>
 
                                             {imageError && (
-                                                <p className="text-red-600 text-xs font-bold mt-2 text-center">{imageError}</p>
+                                                <p className="text-bad text-xs font-bold mt-2 text-center">{imageError}</p>
                                             )}
                                         </div>
 
                                         {/* INGREDIENT SEARCH & ADD SECTION */}
-                                        <div className="p-5 bg-gray-50 rounded-2xl border border-gray-200 shadow-inner">
-                                            <label className="block text-sm font-black text-gray-400 uppercase mb-4 tracking-tighter">Add Ingredients from API</label>
+                                        <div className="p-5 bg-stone-50 rounded-2xl border border-line">
+                                            <label className="block text-sm font-bold text-stone-400 uppercase mb-4 tracking-tighter">Add Ingredients from API</label>
 
                                             <div className="flex items-end gap-3 mb-6">
                                                 <div className="flex-1">
-                                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Search Food</label>
+                                                    <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1 ml-1">Search Food</label>
                                                     <IngredientSearch key={selectedRecipe.id} hideLabel onSelect={(food) => {
                                                         setLastSelectedFood(food);
                                                         setErrors(prev => ({ ...prev, name: false })); // Clear the "name" error once picked
@@ -594,13 +594,13 @@ function Recipes() {
                                                     }} />
                                                 </div>
                                                 <div className="w-24">
-                                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Qty ({selectedUnit})</label>
+                                                    <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1 ml-1">Qty ({selectedUnit})</label>
                                                     <input
                                                         type="number"
                                                         value={amount}
                                                         onChange={(e) => setAmount(Number(e.target.value))}
                                                         className={`w-full h-[42px] px-3 border rounded-xl outline-none transition-all ${
-                                                            errors.amount ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                                                            errors.amount ? 'border-bad bg-bad-soft' : 'border-stone-300'
                                                         }`}
                                                         placeholder="0"
                                                     />
@@ -615,25 +615,25 @@ function Recipes() {
                                                         setLastSelectedFood(null); // Clear it after adding so the same item isn't added twice by mistake
                                                         setSelectedUnit('g');
                                                     }}
-                                                    className="h-[42px] px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-sm transition-all active:scale-95"
+                                                    className="h-[42px] px-6 bg-accent hover:bg-accent-dark text-white font-bold rounded-xl shadow-sm transition-all active:scale-95"
                                                 >
                                                     Add
                                                 </button>
                                             </div>
 
-                                            {errors.amount && <p className="text-red-500 text-[10px] font-bold -mt-4 mb-4 ml-1 animate-pulse">⚠️ Enter amount first</p>}
-                                            {errors.name && <p className="text-red-500 text-[10px] font-bold -mt-4 mb-4 ml-1 animate-pulse">⚠️ Search and click an item first</p>}
+                                            {errors.amount && <p className="text-bad text-[10px] font-bold -mt-4 mb-4 ml-1">Enter amount first</p>}
+                                            {errors.name && <p className="text-bad text-[10px] font-bold -mt-4 mb-4 ml-1">Search and click an item first</p>}
 
                                             {ingredientsError && (
-                                                <p className="text-red-600 text-xs font-bold mb-2">{ingredientsError}</p>
+                                                <p className="text-bad text-xs font-bold mb-2">{ingredientsError}</p>
                                             )}
 
                                             {/* Ingredient Bubbles */}
-                                            <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-200">
+                                            <div className="flex flex-wrap gap-2 pt-2 border-t border-line">
                                                 {recipeIngredients.map((ing) => (
-                                                    <div key={ing.id} className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-gray-200 text-xs font-bold shadow-sm group">
+                                                    <div key={ing.id} className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-line text-xs font-bold shadow-sm group">
                                                         {editingIngredientId === ing.id ? (
-                                                            <span className="flex items-center gap-0.5 text-indigo-600">
+                                                            <span className="flex items-center gap-0.5 text-accent">
                                                                 <input
                                                                     type="number"
                                                                     min="0"
@@ -649,7 +649,7 @@ function Recipes() {
                                                                             e.currentTarget.blur();
                                                                         }
                                                                     }}
-                                                                    className="w-12 px-1 border border-indigo-300 rounded text-xs font-bold text-indigo-600 outline-none"
+                                                                    className="w-12 px-1 border border-accent rounded text-xs font-bold text-accent outline-none"
                                                                 />
                                                                 {ing.unit_type}
                                                             </span>
@@ -661,13 +661,13 @@ function Recipes() {
                                                                     setEditingIngredientId(ing.id);
                                                                     setEditingAmount(String(ing.amount));
                                                                 }}
-                                                                className="text-indigo-600 hover:underline"
+                                                                className="text-accent hover:underline"
                                                             >
                                                                 {ing.amount}{ing.unit_type}
                                                             </button>
                                                         )}
-                                                        <span className="text-gray-700 uppercase tracking-tight">{ing.name}</span>
-                                                        <button onClick={() => removeIngredientFromRecipe(ing.id)} className="text-gray-300 hover:text-red-500 transition-colors ml-1">✕</button>
+                                                        <span className="text-stone-700 uppercase tracking-tight">{ing.name}</span>
+                                                        <button onClick={() => removeIngredientFromRecipe(ing.id)} className="text-stone-300 hover:text-bad transition-colors ml-1">✕</button>
                                                     </div>
                                                 ))}
                                             </div>
@@ -677,13 +677,13 @@ function Recipes() {
                                         <div>
                                             <label
                                                 htmlFor="recipe-name"
-                                                className="block text-sm font-black text-gray-400 uppercase mb-2 tracking-tighter"
+                                                className="block text-sm font-bold text-stone-400 uppercase mb-2 tracking-tighter"
                                             >Recipe Name</label>
                                             <input
                                                 id="recipe-name"
                                                 type="text"
-                                                className={`w-full p-4 bg-gray-50 border rounded-xl outline-none transition-colors shadow-inner ${
-                                                    nameError ? 'border-red-500 bg-red-50' : 'border-gray-200 focus:border-indigo-400'
+                                                className={`w-full p-4 bg-stone-50 border rounded-xl outline-none transition-colors ${
+                                                    nameError ? 'border-bad bg-bad-soft' : 'border-line focus:border-accent'
                                                 }`}
                                                 value={editName}
                                                 onChange={(e) => {
@@ -692,7 +692,7 @@ function Recipes() {
                                                 }}
                                             />
                                             {nameError && (
-                                                <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">⚠️ Recipe name can't be empty</p>
+                                                <p className="text-bad text-[10px] font-bold mt-1 ml-1">Recipe name can't be empty</p>
                                             )}
                                         </div>
 
@@ -700,11 +700,11 @@ function Recipes() {
                                         <div>
                                             <label
                                                 htmlFor="recipe-type"
-                                                className="block text-sm font-black text-gray-400 uppercase mb-2 tracking-tighter"
+                                                className="block text-sm font-bold text-stone-400 uppercase mb-2 tracking-tighter"
                                             >Recipe Type</label>
                                             <select
                                                 id="recipe-type"
-                                                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-indigo-400 transition-colors shadow-inner"
+                                                className="w-full p-4 bg-stone-50 border border-line rounded-xl outline-none focus:border-accent transition-colors"
                                                 value={type}
                                                 onChange={(e) => setType(e.target.value)}
                                             >
@@ -719,41 +719,40 @@ function Recipes() {
                                         <div>
                                             <label
                                                 htmlFor="base-servings"
-                                                className="block text-sm font-black text-gray-400 uppercase mb-2 tracking-tighter"
+                                                className="block text-sm font-bold text-stone-400 uppercase mb-2 tracking-tighter"
                                             >Servings This Recipe Makes</label>
                                             <input
                                                 id="base-servings"
                                                 type="number"
                                                 min="1"
-                                                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-indigo-400 transition-colors shadow-inner"
+                                                className="w-full p-4 bg-stone-50 border border-line rounded-xl outline-none focus:border-accent transition-colors"
                                                 value={baseServings}
                                                 onChange={(e) => setBaseServings(Number(e.target.value) || 1)}
                                             />
-                                            <p className="text-[10px] font-bold text-gray-400 mt-1 ml-1">
+                                            <p className="text-[10px] font-bold text-stone-400 mt-1 ml-1">
                                                 Used to calculate nutrition per portion and leftovers.
                                             </p>
                                         </div>
 
                                         {/* Instructions Section */}
                                         <div>
-                                            <label className="block text-sm font-black text-gray-400 uppercase mb-2 tracking-tighter">Cooking Instructions</label>
+                                            <label className="block text-sm font-bold text-stone-400 uppercase mb-2 tracking-tighter">Cooking Instructions</label>
                                             <textarea
-                                                className="w-full min-h-[150px] p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-indigo-400 transition-colors shadow-inner"
+                                                className="w-full min-h-[150px] p-4 bg-stone-50 border border-line rounded-xl outline-none focus:border-accent transition-colors"
                                                 value={description}
                                                 onChange={(e) => setDescription(e.target.value)}
                                                 placeholder="Write your recipe steps here..."
                                             />
                                         </div>
 
-                                        <button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-xl shadow-xl transition-all active:scale-95" onClick={updateRecipe}>
+                                        <button className="w-full bg-good hover:bg-good-dark text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-95" onClick={updateRecipe}>
                                             SAVE CHANGES
                                         </button>
                                     </div>
                                 </div>
                             ) : (
-                                <div className="h-full flex flex-col items-center justify-center border-2 border-dashed border-gray-100 rounded-3xl p-12 text-center">
-                                    <div className="text-5xl mb-4 grayscale">🥗</div>
-                                    <h3 className="text-lg font-bold text-gray-400">Select a recipe to start cooking</h3>
+                                <div className="h-full flex flex-col items-center justify-center border-2 border-dashed border-line rounded-2xl p-12 text-center">
+                                                                        <h3 className="text-lg font-bold text-stone-400">Select a recipe to start cooking</h3>
                                 </div>
                             )}
                         </div>

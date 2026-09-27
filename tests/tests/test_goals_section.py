@@ -5,7 +5,7 @@ def test_user_goals_section_is_visible(page: Page, visit):
     visit("/goals")
 
     expect(
-        page.get_by_role("heading", name="🎯 Set Nutritional Targets")
+        page.get_by_role("heading", name="Set Nutritional Targets")
     ).to_be_visible()
 
     expect(page.get_by_label("Max Calories")).to_be_visible()
@@ -26,7 +26,7 @@ def test_update_nutrition_goals(page: Page, visit):
     page.get_by_label("Max Fat").fill("65")
     page.get_by_role("button", name="Update Targets").click()
 
-    expect(page.get_by_text("Goals updated successfully! 🚀")).to_be_visible()
+    expect(page.get_by_text("Goals updated successfully.")).to_be_visible()
 
 
 def test_goals_persist_after_reload(page: Page, visit):
@@ -40,7 +40,7 @@ def test_goals_persist_after_reload(page: Page, visit):
     page.get_by_role("button", name="Update Targets").click()
 
     # Wait until save completed
-    expect(page.get_by_text("Goals updated successfully! 🚀")).to_be_visible()
+    expect(page.get_by_text("Goals updated successfully.")).to_be_visible()
 
     # Force the app to fetch the values again
     page.reload()

@@ -27,22 +27,22 @@ export default function Auth() {
     }
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
-            <div className="max-w-md w-full bg-white rounded-3xl shadow-xl border border-gray-100 p-8">
+        <div className="flex items-center justify-center min-h-screen bg-surface p-4">
+            <div className="max-w-md w-full bg-white rounded-2xl shadow-lg border border-line p-8">
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-black text-gray-900 tracking-tighter">
+                    <h1 className="text-3xl font-black text-stone-900 tracking-tighter">
                         {isSignUp ? 'Create Account' : 'Welcome Back'}
                     </h1>
-                    <p className="text-gray-400 text-sm font-medium mt-2">
+                    <p className="text-stone-400 text-sm font-medium mt-2">
                         {isSignUp ? 'Start your healthy journey today' : 'Log in to manage your meals'}
                     </p>
                 </div>
 
                 <form onSubmit={handleAuth} className="space-y-4">
                     <div>
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1 tracking-widest text-gray-400">Email Address</label>
+                        <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1 ml-1 tracking-widest text-stone-400">Email Address</label>
                         <input
-                            className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-indigo-500 transition-all font-medium text-gray-900"
+                            className="w-full px-4 py-3 border border-line rounded-xl outline-none focus:border-accent transition-all font-medium text-stone-900"
                             type="email"
                             placeholder="you@example.com"
                             value={email}
@@ -51,9 +51,9 @@ export default function Auth() {
                         />
                     </div>
                     <div>
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1 tracking-widest text-gray-400">Password</label>
+                        <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1 ml-1 tracking-widest text-stone-400">Password</label>
                         <input
-                            className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-indigo-500 transition-all font-medium text-gray-900"
+                            className="w-full px-4 py-3 border border-line rounded-xl outline-none focus:border-accent transition-all font-medium text-stone-900"
                             type="password"
                             placeholder="••••••••"
                             value={password}
@@ -64,7 +64,7 @@ export default function Auth() {
 
                     <button
                         disabled={loading}
-                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-xl shadow-lg shadow-indigo-100 transition-all active:scale-95 mt-2"
+                        className="w-full bg-accent hover:bg-accent-dark text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-95 mt-2"
                     >
                         {loading ? 'Processing...' : isSignUp ? 'Sign Up' : 'Sign In'}
                     </button>
@@ -72,7 +72,7 @@ export default function Auth() {
 
                 <button
                     onClick={() => setIsSignUp(!isSignUp)}
-                    className="w-full mt-6 text-xs font-bold text-gray-400 hover:text-indigo-600 transition-colors uppercase tracking-widest"
+                    className="w-full mt-6 text-xs font-bold text-stone-400 hover:text-accent transition-colors uppercase tracking-widest"
                 >
                     {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
                 </button>

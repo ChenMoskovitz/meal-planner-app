@@ -304,33 +304,33 @@ function MealPlan() {
 
     // --- 5. Render ---
     return (
-        <div className="max-w-7xl mx-auto p-4 md:px-8 pb-8 bg-gray-50">
+        <div className="max-w-7xl mx-auto p-4 md:px-8 pb-8">
             {/* Header Section */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-line mb-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <h2 className="text-2xl font-extrabold text-gray-900">📅 Weekly Dinner Plan</h2>
+                    <h2 className="text-2xl font-extrabold text-stone-900">Weekly Dinner Plan</h2>
                     <div className="flex items-center gap-2">
-                        <button className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium" onClick={() => changeWeek(-7)}>⬅️ Prev</button>
-                        <button className="px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-bold" onClick={() => setCurrentSunday(getSundayOfCurrentWeek(new Date()))}>Today</button>
-                        <button className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium" onClick={() => changeWeek(7)}>Next ➡️</button>
+                        <button className="px-4 py-2 bg-stone-100 hover:bg-stone-200 rounded-lg text-sm font-medium" onClick={() => changeWeek(-7)}>Prev</button>
+                        <button className="px-4 py-2 bg-accent-soft text-accent-dark hover:bg-accent-line rounded-lg text-sm font-bold" onClick={() => setCurrentSunday(getSundayOfCurrentWeek(new Date()))}>Today</button>
+                        <button className="px-4 py-2 bg-stone-100 hover:bg-stone-200 rounded-lg text-sm font-medium" onClick={() => changeWeek(7)}>Next</button>
                     </div>
                 </div>
 
                 <div className="flex flex-wrap gap-3 mt-6">
-                    <button className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl font-bold shadow-md transition-all active:scale-95" onClick={saveWeeklyPlan}>💾 Save Plan</button>
-                    <button className={`border px-4 py-2 rounded-xl text-sm font-semibold ${showDailyNutrition ? 'bg-indigo-600 text-white' : 'bg-white'}`} onClick={() => setShowDailyNutrition(!showDailyNutrition)}>📊 {showDailyNutrition ? 'Hide kcal' : 'Show kcal'}</button>
-                    <button className={`border px-4 py-2 rounded-xl text-sm font-semibold ${showWeeklyStats ? 'bg-indigo-600 text-white' : 'bg-white'}`} onClick={() => setShowWeeklyStats(!showWeeklyStats)}>📈 {showWeeklyStats ? 'Hide Stats' : 'Show Stats'}</button>
+                    <button className="bg-good hover:bg-good-dark text-white px-5 py-2 rounded-xl font-bold shadow-sm transition-all active:scale-95" onClick={saveWeeklyPlan}>Save Plan</button>
+                    <button className={`border px-4 py-2 rounded-xl text-sm font-semibold ${showDailyNutrition ? 'bg-accent text-white' : 'bg-white'}`} onClick={() => setShowDailyNutrition(!showDailyNutrition)}>{showDailyNutrition ? 'Hide kcal' : 'Show kcal'}</button>
+                    <button className={`border px-4 py-2 rounded-xl text-sm font-semibold ${showWeeklyStats ? 'bg-accent text-white' : 'bg-white'}`} onClick={() => setShowWeeklyStats(!showWeeklyStats)}>{showWeeklyStats ? 'Hide Stats' : 'Show Stats'}</button>
 
-                    <div className="ml-auto flex items-center gap-2 bg-orange-50 px-4 py-2 rounded-xl border border-orange-100">
-                        <label className="text-sm font-bold text-orange-800 uppercase tracking-tight">Planning for:</label>
+                    <div className="ml-auto flex items-center gap-2 bg-accent-soft px-4 py-2 rounded-xl border border-accent-line">
+                        <label className="text-sm font-bold text-accent-dark uppercase tracking-tight">Planning for:</label>
                         <input
                             type="number"
                             min="1"
                             value={globalPlannedServings}
                             onChange={(e) => setGlobalPlannedServings(parseInt(e.target.value) || 1)}
-                            className="w-10 bg-transparent border-b-2 border-orange-300 text-center font-bold text-orange-900 outline-none"
+                            className="w-10 bg-transparent border-b-2 border-accent text-center font-bold text-accent-dark outline-none"
                         />
-                        <span className="text-sm font-bold text-orange-800">people</span>
+                        <span className="text-sm font-bold text-accent-dark">people</span>
                     </div>
                 </div>
             </div>
@@ -343,49 +343,49 @@ function MealPlan() {
                     const dayPlan = plan[dateStr];
 
                     return (
-                        <div key={dateStr} className={`relative p-3 rounded-xl border-2 transition-all ${isToday ? 'bg-blue-50 border-blue-200 ring-2 ring-blue-100' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
+                        <div key={dateStr} className={`relative p-3 rounded-xl border-2 transition-all ${isToday ? 'bg-blue-50 border-blue-200 ring-2 ring-blue-100' : 'bg-white border-line hover:border-line'}`}>
                             <div className="text-center mb-3">
-                                <div className="text-[10px] font-bold text-gray-400 uppercase">{new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' })}</div>
-                                <div className="text-lg font-black text-gray-900">{new Date(dateStr + 'T00:00:00').getDate()}</div>
+                                <div className="text-[10px] font-bold text-stone-400 uppercase">{new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                                <div className="text-lg font-bold text-stone-900">{new Date(dateStr + 'T00:00:00').getDate()}</div>
                             </div>
 
                             {showDailyNutrition && dayNutri && dayNutri.calories > 0 && (
-                                <div className="mb-3 p-2 bg-gray-50 rounded-lg border border-gray-100 text-center">
-                                    <div className="text-xs font-bold text-gray-700 italic">🔥 {dayNutri.calories.toFixed(0)} kcal</div>
+                                <div className="mb-3 p-2 bg-stone-50 rounded-lg border border-line text-center">
+                                    <div className="text-xs font-bold text-stone-700">{dayNutri.calories.toFixed(0)} kcal</div>
                                 </div>
                             )}
 
                             {dayPlan && dayPlan.main ? (
                                 <div className="space-y-3">
-                                    <div className="p-3 bg-white rounded-xl border border-gray-100 shadow-sm">
-                                        <div className="text-sm font-bold text-gray-800 leading-tight mb-1">{dayPlan.main?.name}</div>
+                                    <div className="p-3 bg-white rounded-xl border border-line shadow-sm">
+                                        <div className="text-sm font-bold text-stone-800 leading-tight mb-1">{dayPlan.main?.name}</div>
 
                                         {/* Leftovers Logic */}
                                         {(() => {
                                             const base = dayPlan.main.base_servings || 1;
                                             const leftovers = base - globalPlannedServings;
                                             return leftovers > 0 ? (
-                                                <span className="inline-block bg-purple-100 text-purple-700 text-[10px] font-black px-2 py-0.5 rounded-md mt-1">
+                                                <span className="inline-block bg-stone-200 text-stone-700 text-[10px] font-bold px-2 py-0.5 rounded-lg mt-1">
                                                     +{leftovers} Leftovers
                                                 </span>
                                             ) : null;
                                         })()}
 
-                                        {dayPlan.side && <div className="text-[11px] text-gray-600 mt-2 truncate">🥗 {dayPlan.side.name}</div>}
-                                        {dayPlan.veg && <div className="text-[11px] text-gray-600 mt-0.5 truncate">🥦 {dayPlan.veg.name}</div>}
+                                        {dayPlan.side && <div className="text-[11px] text-stone-600 mt-2 truncate"><span className="text-stone-400">Side</span> {dayPlan.side.name}</div>}
+                                        {dayPlan.veg && <div className="text-[11px] text-stone-600 mt-0.5 truncate"><span className="text-stone-400">Veg</span> {dayPlan.veg.name}</div>}
 
-                                        <div className="mt-3 pt-2 border-t border-gray-50 space-y-1">
+                                        <div className="mt-3 pt-2 border-t border-stone-50 space-y-1">
                                             {dayPlan.main?.type !== 'full_meal' && (
                                                 <>
                                                     {!dayPlan.side && (
                                                         <button
-                                                            className="w-full text-[9px] font-bold py-1 bg-gray-50 text-gray-400 hover:bg-emerald-50 hover:text-emerald-600 rounded transition-colors"
+                                                            className="w-full text-[9px] font-bold py-1 bg-stone-50 text-stone-400 hover:bg-good-soft hover:text-good rounded transition-colors"
                                                             onClick={() => addComponentToDay(dateStr, 'side', 'side')}
                                                         >+ Side</button>
                                                     )}
                                                     {!dayPlan.veg && (
                                                         <button
-                                                            className="w-full text-[9px] font-bold py-1 bg-gray-50 text-gray-400 hover:bg-emerald-50 hover:text-emerald-600 rounded transition-colors"
+                                                            className="w-full text-[9px] font-bold py-1 bg-stone-50 text-stone-400 hover:bg-good-soft hover:text-good rounded transition-colors"
                                                             onClick={() => addComponentToDay(dateStr, 'veg', 'vegetable_side')}
                                                         >+ Veg</button>
                                                     )}
@@ -397,7 +397,7 @@ function MealPlan() {
                                 </div>
                             ) : (
                                 <div className="space-y-2">
-                                    <select className="w-full text-[10px] p-2 bg-gray-50 border border-gray-200 rounded-lg outline-none" onChange={(e) => {
+                                    <select className="w-full text-[10px] p-2 bg-stone-50 border border-line rounded-lg outline-none" onChange={(e) => {
                                         const selected = recipes.find(r => r.id === e.target.value);
                                         setPlan(prev => ({ ...prev, [dateStr]: { main: selected } }));
                                     }}>
@@ -406,7 +406,7 @@ function MealPlan() {
                                             <option key={r.id} value={r.id}>{r.name}</option>
                                         ))}
                                     </select>
-                                    <button className="w-full text-[10px] font-bold py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg" onClick={() => setRandomForDay(dateStr)}>🎲 Random</button>
+                                    <button className="w-full text-[10px] font-bold py-2 bg-accent-soft text-accent hover:bg-accent-line rounded-lg" onClick={() => setRandomForDay(dateStr)}>Random</button>
                                 </div>
                             )}
                         </div>
@@ -416,55 +416,55 @@ function MealPlan() {
 
             {/* Weekly Goal Progress Bars */}
             {showWeeklyStats && nutritionalGoals && (
-                <div className="mt-8 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-                    <h3 className="text-lg font-black text-gray-900 mb-4 tracking-tighter">Weekly Summary (Per Person)</h3>
+                <div className="mt-8 bg-white p-6 rounded-2xl border border-line shadow-sm">
+                    <h3 className="text-lg font-black text-stone-900 mb-4 tracking-tighter">Weekly Summary (Per Person)</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {/* Calories */}
-                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        <div className="bg-stone-50 p-4 rounded-xl border border-line">
                             <div className="flex justify-between items-start mb-1">
-                                <span className="text-[10px] font-bold text-gray-400 uppercase">Avg Calories</span>
-                                <span className="text-[10px] font-black text-black bg-gray-200 px-1.5 py-0.5 rounded">Goal: {nutritionalGoals.target_calories}</span>
+                                <span className="text-[10px] font-bold text-stone-400 uppercase">Avg Calories</span>
+                                <span className="text-[10px] font-bold text-black bg-stone-200 px-1.5 py-0.5 rounded">Goal: {nutritionalGoals.target_calories}</span>
                             </div>
-                            <div className={`text-xl font-black ${dailyAverage.calories > nutritionalGoals.target_calories ? 'text-red-500' : 'text-emerald-600'}`}>
+                            <div className={`text-xl font-bold ${dailyAverage.calories > nutritionalGoals.target_calories ? 'text-bad' : 'text-good'}`}>
                                 {dailyAverage.calories.toFixed(0)}
                             </div>
-                            <div className="w-full h-2 bg-gray-200 rounded-full mt-2 overflow-hidden shadow-inner">
+                            <div className="w-full h-2 bg-stone-200 rounded-full mt-2 overflow-hidden">
                                 <div
-                                    className={`h-full transition-all duration-700 ${dailyAverage.calories > nutritionalGoals.target_calories ? 'bg-red-500' : 'bg-emerald-500'}`}
+                                    className={`h-full transition-all duration-700 ${dailyAverage.calories > nutritionalGoals.target_calories ? 'bg-bad' : 'bg-good'}`}
                                     style={{ width: `${Math.min((dailyAverage.calories / nutritionalGoals.target_calories) * 100, 100)}%` }}
                                 ></div>
                             </div>
                         </div>
 
                         {/* Protein */}
-                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        <div className="bg-stone-50 p-4 rounded-xl border border-line">
                             <div className="flex justify-between items-start mb-1">
-                                <span className="text-[10px] font-bold text-gray-400 uppercase">Avg Protein</span>
-                                <span className="text-[10px] font-black text-black bg-gray-200 px-1.5 py-0.5 rounded">Goal: {nutritionalGoals.min_protein}g</span>
+                                <span className="text-[10px] font-bold text-stone-400 uppercase">Avg Protein</span>
+                                <span className="text-[10px] font-bold text-black bg-stone-200 px-1.5 py-0.5 rounded">Goal: {nutritionalGoals.min_protein}g</span>
                             </div>
-                            <div className={`text-xl font-black ${dailyAverage.protein >= nutritionalGoals.min_protein ? 'text-emerald-600' : 'text-orange-500'}`}>
+                            <div className={`text-xl font-bold ${dailyAverage.protein >= nutritionalGoals.min_protein ? 'text-good' : 'text-warn'}`}>
                                 {dailyAverage.protein.toFixed(1)}g
                             </div>
-                            <div className="w-full h-2 bg-gray-200 rounded-full mt-2 overflow-hidden shadow-inner">
+                            <div className="w-full h-2 bg-stone-200 rounded-full mt-2 overflow-hidden">
                                 <div
-                                    className={`h-full transition-all duration-700 ${dailyAverage.protein >= nutritionalGoals.min_protein ? 'bg-emerald-500' : 'bg-orange-500'}`}
+                                    className={`h-full transition-all duration-700 ${dailyAverage.protein >= nutritionalGoals.min_protein ? 'bg-good' : 'bg-warn'}`}
                                     style={{ width: `${Math.min((dailyAverage.protein / nutritionalGoals.min_protein) * 100, 100)}%` }}
                                 ></div>
                             </div>
                         </div>
 
                         {/* Fiber */}
-                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        <div className="bg-stone-50 p-4 rounded-xl border border-line">
                             <div className="flex justify-between items-start mb-1">
-                                <span className="text-[10px] font-bold text-gray-400 uppercase">Avg Fiber</span>
-                                <span className="text-[10px] font-black text-black bg-gray-200 px-1.5 py-0.5 rounded">Goal: {nutritionalGoals.min_fiber}g</span>
+                                <span className="text-[10px] font-bold text-stone-400 uppercase">Avg Fiber</span>
+                                <span className="text-[10px] font-bold text-black bg-stone-200 px-1.5 py-0.5 rounded">Goal: {nutritionalGoals.min_fiber}g</span>
                             </div>
-                            <div className={`text-xl font-black ${dailyAverage.fiber >= nutritionalGoals.min_fiber ? 'text-emerald-600' : 'text-orange-500'}`}>
+                            <div className={`text-xl font-bold ${dailyAverage.fiber >= nutritionalGoals.min_fiber ? 'text-good' : 'text-warn'}`}>
                                 {dailyAverage.fiber.toFixed(1)}g
                             </div>
-                            <div className="w-full h-2 bg-gray-200 rounded-full mt-2 overflow-hidden shadow-inner">
+                            <div className="w-full h-2 bg-stone-200 rounded-full mt-2 overflow-hidden">
                                 <div
-                                    className={`h-full transition-all duration-700 ${dailyAverage.fiber >= nutritionalGoals.min_fiber ? 'bg-emerald-500' : 'bg-orange-500'}`}
+                                    className={`h-full transition-all duration-700 ${dailyAverage.fiber >= nutritionalGoals.min_fiber ? 'bg-good' : 'bg-warn'}`}
                                     style={{ width: `${Math.min((dailyAverage.fiber / nutritionalGoals.min_fiber) * 100, 100)}%` }}
                                 ></div>
                             </div>
@@ -474,11 +474,11 @@ function MealPlan() {
             )}
 
             {/* THE SHOPPING COMMAND CENTER */}
-            <div className="mt-12 border-t border-gray-200 pt-12">
+            <div className="mt-12 border-t border-line pt-12">
                 {/* Header Row */}
                 <div className="mb-8 text-center md:text-left">
-                    <h3 className="text-2xl font-black text-gray-900 tracking-tight">🛒 Shopping Manager</h3>
-                    <p className="text-gray-500 font-medium">Review your week and build your final grocery list</p>
+                    <h3 className="text-2xl font-black text-stone-900 tracking-tight">Shopping Manager</h3>
+                    <p className="text-stone-500 font-medium">Review your week and build your final grocery list</p>
                 </div>
 
                 <div className="flex flex-col md:flex-row gap-8 items-start">
@@ -486,24 +486,24 @@ function MealPlan() {
                     {/* LEFT COLUMN: Ingredient Review */}
                     <div className="flex-1 w-full">
                         <button
-                            className="w-full bg-white border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50 px-6 py-4 rounded-2xl font-black transition-all active:scale-95 mb-6 shadow-sm"
+                            className="w-full bg-white border-2 border-accent text-accent hover:bg-accent-soft px-6 py-4 rounded-2xl font-bold transition-all active:scale-95 mb-6 shadow-sm"
                             onClick={getWeeklyIngredients}
                         >
-                            🔍 1. Generate Review from Plan
+                            Generate Review from Plan
                         </button>
 
                         <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                             {shoppingList.length === 0 && (
-                                <div className="text-center py-10 bg-white rounded-2xl border border-dashed border-gray-200 text-gray-400 font-medium italic">
+                                <div className="text-center py-10 bg-white rounded-2xl border border-dashed border-line text-stone-400 font-medium">
                                     Click the button above to see what you need...
                                 </div>
                             )}
                             {shoppingList.map((item, index) => (
-                                <div key={index} className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm group hover:border-indigo-100 transition-all">
-                                    <span className="font-bold text-gray-700 capitalize leading-tight">{item.display}</span>
+                                <div key={index} className="flex items-center justify-between bg-white p-4 rounded-2xl border border-line shadow-sm group hover:border-accent-line transition-all">
+                                    <span className="font-bold text-stone-700 capitalize leading-tight">{item.display}</span>
                                     <button
                                         onClick={() => addToPermanentList(item.name, item.display)}
-                                        className="bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white px-4 py-2 rounded-xl text-[10px] font-black transition-all active:scale-90 shadow-sm uppercase tracking-wider"
+                                        className="bg-good-soft text-good hover:bg-good hover:text-white px-4 py-2 rounded-xl text-[10px] font-bold transition-all active:scale-90 shadow-sm uppercase tracking-wider"
                                     >
                                         + Add
                                     </button>
@@ -513,17 +513,17 @@ function MealPlan() {
                     </div>
 
                     {/* RIGHT COLUMN: Final List (Matches Height & Light Theme) */}
-                    <div className="w-full md:w-96 bg-white rounded-3xl p-6 border border-gray-200 shadow-xl self-start sticky top-8">
+                    <div className="w-full md:w-96 bg-white rounded-2xl p-6 border border-line shadow-lg self-start sticky top-8">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-gray-900 font-black text-lg tracking-tight">📝 2. Final List</h3>
-                            <span className="bg-gray-100 text-gray-500 text-[10px] font-black px-2 py-1 rounded-lg uppercase">
+                            <h3 className="text-stone-900 font-black text-lg tracking-tight">Final List</h3>
+                            <span className="bg-stone-100 text-stone-500 text-[10px] font-bold px-2 py-1 rounded-lg uppercase">
                     {permanentList.length} items
                 </span>
                         </div>
 
                         <div className="space-y-3">
                             {permanentList.length === 0 ? (
-                                <p className="text-gray-400 text-xs italic font-medium py-12 text-center border-2 border-dashed border-gray-100 rounded-2xl">
+                                <p className="text-stone-400 text-xs font-medium py-12 text-center border-2 border-dashed border-line rounded-2xl">
                                     Your list is empty. Add items from the left!
                                 </p>
                             ) : (
@@ -532,11 +532,11 @@ function MealPlan() {
                                         key={item.id}
                                         onClick={() => toggleBought(item.id, item.is_bought)}
                                         className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer group 
-                                ${item.is_bought ? 'bg-gray-50 border-transparent' : 'bg-white border-gray-50 hover:border-indigo-100 shadow-sm'}`}
+                                ${item.is_bought ? 'bg-stone-50 border-transparent' : 'bg-white border-stone-50 hover:border-accent-line shadow-sm'}`}
                                     >
                                         {/* Visual Checkbox */}
                                         <div className={`mt-0.5 w-5 h-5 rounded-lg border-2 flex-shrink-0 flex items-center justify-center transition-all 
-                                ${item.is_bought ? 'bg-indigo-500 border-indigo-500 shadow-inner' : 'border-gray-300 group-hover:border-indigo-400'}`}>
+                                ${item.is_bought ? 'bg-accent border-accent' : 'border-stone-300 group-hover:border-accent'}`}>
                                             {item.is_bought && (
                                                 <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7" />
@@ -547,11 +547,11 @@ function MealPlan() {
                                         {/* Text Content with Strikethrough */}
                                         <div className="flex-1 min-w-0">
                                             <p className={`text-sm font-bold leading-tight truncate transition-all 
-                                    ${item.is_bought ? 'text-gray-300 line-through decoration-indigo-300/50 decoration-2' : 'text-gray-700'}`}>
+                                    ${item.is_bought ? 'text-stone-300 line-through decoration-accent/50 decoration-2' : 'text-stone-700'}`}>
                                                 {item.item_name}
                                             </p>
-                                            <p className={`text-[9px] font-black uppercase tracking-tight 
-                                    ${item.is_bought ? 'text-gray-200' : 'text-gray-400'}`}>
+                                            <p className={`text-[9px] font-bold uppercase tracking-tight 
+                                    ${item.is_bought ? 'text-stone-200' : 'text-stone-400'}`}>
                                                 {item.amount}
                                             </p>
                                         </div>
@@ -585,7 +585,7 @@ function MealPlan() {
                                     }
                                     fetchPermanentList();
                                 }}
-                                className="w-full mt-8 py-3 text-[10px] font-black text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl uppercase tracking-widest transition-all border border-transparent hover:border-red-100"
+                                className="w-full mt-8 py-3 text-[10px] font-bold text-stone-400 hover:text-bad hover:bg-bad-soft rounded-xl uppercase tracking-widest transition-all border border-transparent hover:border-bad-soft"
                             >
                                 Clear All Items
                             </button>

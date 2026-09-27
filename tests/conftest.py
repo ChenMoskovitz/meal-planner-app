@@ -103,7 +103,7 @@ def auth_storage(browser, test_user):
 
     # Generous, because this is the one request that waits on Supabase auth.
     expect(
-        page.get_by_role("heading", name="📅 Weekly Dinner Plan")
+        page.get_by_role("heading", name="Weekly Dinner Plan")
     ).to_be_visible(timeout=60_000)
 
     state = context.storage_state()
@@ -129,7 +129,7 @@ def signed_in_user(page: Page, test_user, auth_storage):
     page.reload()
 
     expect(
-        page.get_by_role("heading", name="📅 Weekly Dinner Plan")
+        page.get_by_role("heading", name="Weekly Dinner Plan")
     ).to_be_visible()
 
     return test_user["email"]
@@ -166,7 +166,7 @@ def signed_up_user(page: Page, new_user_email):
     page.get_by_role("button", name="Sign Up").click()
 
     expect(
-        page.get_by_role("heading", name="📅 Weekly Dinner Plan")
+        page.get_by_role("heading", name="Weekly Dinner Plan")
     ).to_be_visible(timeout=60_000)
 
     return new_user_email

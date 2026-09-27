@@ -21,7 +21,7 @@ export const SECTIONS = [
 
 export default function NavTabs() {
     return (
-        <nav aria-label="Sections" className="border-b border-gray-200">
+        <nav aria-label="Sections" className="border-b border-line">
             {/* Scrollable rather than wrapping, so five tabs stay on one line
                 on a phone instead of becoming two rows of different heights.
                 no-scrollbar hides the track, which otherwise shows on a desktop
@@ -34,8 +34,8 @@ export default function NavTabs() {
                         className={({ isActive }) =>
                             `shrink-0 px-4 py-3 text-xs font-bold tracking-wide border-b-2 -mb-px transition-all ${
                                 isActive
-                                    ? 'border-indigo-600 text-indigo-700'
-                                    : 'border-transparent text-gray-500 hover:text-gray-900 hover:border-gray-200'
+                                    ? 'border-accent text-accent-dark'
+                                    : 'border-transparent text-stone-500 hover:text-stone-900 hover:border-line'
                             }`
                         }
                     >
