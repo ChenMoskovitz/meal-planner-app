@@ -418,7 +418,7 @@ function MealPlan() {
             {showWeeklyStats && nutritionalGoals && (
                 <div className="mt-8 bg-white p-6 rounded-2xl border border-line shadow-sm">
                     <h3 className="text-lg font-black text-stone-900 mb-4 tracking-tighter">Weekly Summary (Per Person)</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {/* Calories */}
                         <div className="bg-stone-50 p-4 rounded-xl border border-line">
                             <div className="flex justify-between items-start mb-1">
@@ -466,6 +466,24 @@ function MealPlan() {
                                 <div
                                     className={`h-full transition-all duration-700 ${dailyAverage.fiber >= nutritionalGoals.min_fiber ? 'bg-good' : 'bg-warn'}`}
                                     style={{ width: `${Math.min((dailyAverage.fiber / nutritionalGoals.min_fiber) * 100, 100)}%` }}
+                                ></div>
+                            </div>
+                        </div>
+
+                        {/* Fat. A ceiling like calories, so exceeding it is what
+                            reads as bad, unlike protein and fiber above. */}
+                        <div className="bg-stone-50 p-4 rounded-xl border border-line">
+                            <div className="flex justify-between items-start mb-1">
+                                <span className="text-[10px] font-bold text-stone-400 uppercase">Avg Fat</span>
+                                <span className="text-[10px] font-bold text-black bg-stone-200 px-1.5 py-0.5 rounded">Goal: {nutritionalGoals.max_fat}g</span>
+                            </div>
+                            <div className={`text-xl font-bold ${dailyAverage.fat > nutritionalGoals.max_fat ? 'text-bad' : 'text-good'}`}>
+                                {dailyAverage.fat.toFixed(1)}g
+                            </div>
+                            <div className="w-full h-2 bg-stone-200 rounded-full mt-2 overflow-hidden">
+                                <div
+                                    className={`h-full transition-all duration-700 ${dailyAverage.fat > nutritionalGoals.max_fat ? 'bg-bad' : 'bg-good'}`}
+                                    style={{ width: `${Math.min((dailyAverage.fat / nutritionalGoals.max_fat) * 100, 100)}%` }}
                                 ></div>
                             </div>
                         </div>
