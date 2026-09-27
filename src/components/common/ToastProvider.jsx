@@ -57,8 +57,8 @@ export function ToastProvider({ children }) {
                         role="status"
                         className={`pointer-events-auto flex items-start justify-between gap-3 px-4 py-3 rounded-xl text-xs font-bold shadow-lg border ${
                             toast.kind === 'success'
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                                : 'bg-red-50 text-red-700 border-red-100'
+                                ? 'bg-good-soft text-good-dark border-good-soft'
+                                : 'bg-bad-soft text-bad-dark border-bad-soft'
                         }`}
                     >
                         <span className="leading-relaxed">{toast.message}</span>

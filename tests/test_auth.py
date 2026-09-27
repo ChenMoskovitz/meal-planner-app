@@ -84,7 +84,7 @@ def test_sign_up_with_new_user(page: Page, new_user_email):
 
     page.get_by_role("button", name="Sign Up").click()
     expect(
-        page.get_by_role("heading", name="📅 Weekly Dinner Plan")
+        page.get_by_role("heading", name="Weekly Dinner Plan")
     ).to_be_visible()
     expect(page.get_by_text(email.upper())).to_be_visible()
 

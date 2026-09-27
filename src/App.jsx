@@ -33,21 +33,21 @@ function App() {
 
     // 4. THE MAIN APP: Only visible if logged in
     return (
-        <div className="min-h-screen bg-gray-50">
-            <header className="bg-white border-b border-gray-200">
+        <div className="min-h-screen bg-surface">
+            <header className="bg-white border-b border-line">
                 <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-lg font-black text-gray-900 tracking-tight">
+                        <h1 className="text-lg font-black text-stone-900 tracking-tight">
                             Meal Planner
                         </h1>
-                        <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">
+                        <p className="text-stone-400 text-[10px] font-bold uppercase tracking-widest">
                             {session.user.email}
                         </p>
                     </div>
 
                     <button
                         onClick={() => supabase.auth.signOut()}
-                        className="bg-white border border-gray-200 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 hover:text-red-600 transition-all shadow-sm"
+                        className="bg-white border border-line px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-bad-soft hover:text-bad transition-all shadow-sm"
                     >
                         Logout
                     </button>

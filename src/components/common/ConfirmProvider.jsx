@@ -40,7 +40,7 @@ export function ConfirmProvider({ children }) {
 
             {request && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4"
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4"
                     // Clicking the backdrop cancels, matching how the Escape key
                     // behaves in a native dialog.
                     onClick={() => settle(false)}
@@ -52,14 +52,14 @@ export function ConfirmProvider({ children }) {
                         // Without this, a click inside the card reaches the
                         // backdrop handler above and cancels the dialog.
                         onClick={event => event.stopPropagation()}
-                        className="bg-white rounded-3xl shadow-xl border border-gray-100 p-6 w-full max-w-sm"
+                        className="bg-white rounded-2xl shadow-lg border border-line p-6 w-full max-w-sm"
                     >
-                        <h2 id="confirm-title" className="text-lg font-black text-gray-900 tracking-tight">
+                        <h2 id="confirm-title" className="text-lg font-black text-stone-900 tracking-tight">
                             {request.title}
                         </h2>
 
                         {request.message && (
-                            <p className="mt-2 text-sm text-gray-500 font-medium leading-relaxed">
+                            <p className="mt-2 text-sm text-stone-500 font-medium leading-relaxed">
                                 {request.message}
                             </p>
                         )}
@@ -67,17 +67,17 @@ export function ConfirmProvider({ children }) {
                         <div className="mt-6 flex gap-3">
                             <button
                                 onClick={() => settle(false)}
-                                className="flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-500 border border-gray-200 hover:bg-gray-50 transition-all"
+                                className="flex-1 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest text-stone-500 border border-line hover:bg-stone-50 transition-all"
                             >
                                 Cancel
                             </button>
                             <button
                                 autoFocus
                                 onClick={() => settle(true)}
-                                className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-all active:scale-95 ${
+                                className={`flex-1 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest text-white transition-all active:scale-95 ${
                                     request.destructive
-                                        ? 'bg-red-600 hover:bg-red-700'
-                                        : 'bg-indigo-600 hover:bg-indigo-700'
+                                        ? 'bg-bad hover:bg-bad-dark'
+                                        : 'bg-accent hover:bg-accent-dark'
                                 }`}
                             >
                                 {request.confirmLabel}

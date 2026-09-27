@@ -83,14 +83,14 @@ const IngredientSearch = ({ onSelect, hideLabel = false }) => {
     return (
         <div className="relative w-full" ref={containerRef}>
             {!hideLabel && (
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-stone-700 mb-1">
                     Search Ingredient
                 </label>
             )}
             <div className="relative">
                 <input
                     type="text"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all pr-10"
+                    className="w-full p-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-accent outline-none transition-all pr-10"
                     placeholder="e.g. Chicken, Broccoli, Pasta..."
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
@@ -98,26 +98,26 @@ const IngredientSearch = ({ onSelect, hideLabel = false }) => {
 
                 {loading && (
                     <div className="absolute right-3 top-3.5">
-                        <div className="animate-spin h-5 w-5 border-2 border-indigo-500 border-t-transparent rounded-full"></div>
+                        <div className="animate-spin h-5 w-5 border-2 border-accent border-t-transparent rounded-full"></div>
                     </div>
                 )}
             </div>
 
             {error && (
-                <p className="mt-1 text-xs font-medium text-red-600">{error}</p>
+                <p className="mt-1 text-xs font-medium text-bad">{error}</p>
             )}
 
             {!loading && !error && searchedQuery === query && results.length === 0 && (
-                <p className="mt-1 text-xs text-gray-500">No results for &ldquo;{query}&rdquo;.</p>
+                <p className="mt-1 text-xs text-stone-500">No results for &ldquo;{query}&rdquo;.</p>
             )}
 
             {/* The Results Dropdown */}
             {results.length > 0 && (
-                <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                <ul className="absolute z-50 w-full mt-1 bg-white border border-line rounded-lg shadow-lg max-h-60 overflow-y-auto">
                     {results.map((hint) => (
                         <li
                             key={hint.food.foodId}
-                            className="p-3 hover:bg-indigo-50 cursor-pointer border-b last:border-b-0 flex justify-between items-center transition-colors"
+                            className="p-3 hover:bg-accent-soft cursor-pointer border-b last:border-b-0 flex justify-between items-center transition-colors"
                             onClick={() => {
                                 onSelect(hint.food); // Sends the whole food object to the parent
                                 setQuery(hint.food.label); // Fills the input with the name
@@ -126,11 +126,11 @@ const IngredientSearch = ({ onSelect, hideLabel = false }) => {
                             }}
                         >
                             <div>
-                                <span className="font-semibold text-gray-800">{hint.food.label}</span>
-                                <p className="text-xs text-gray-500 capitalize">{hint.food.category}</p>
+                                <span className="font-semibold text-stone-800">{hint.food.label}</span>
+                                <p className="text-xs text-stone-500 capitalize">{hint.food.category}</p>
                             </div>
                             <div className="text-right">
-                 <span className="text-xs font-medium text-indigo-600">
+                 <span className="text-xs font-medium text-accent">
                     {Math.round(hint.food.nutrients.ENERC_KCAL)} kcal/100g
                  </span>
                             </div>
