@@ -502,7 +502,7 @@ function Recipes() {
                     <div className="flex flex-col lg:flex-row gap-8">
                         {/* List Column */}
                         <div className="lg:w-1/3">
-                            <h3 className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-4">Recipe List</h3>
+                            <h3 className="text-[10px] font-black uppercase tracking-widest text-stone-600 mb-4">Recipe List</h3>
                             <ul className="space-y-2 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                                 {recipes.map(recipe => (
                                     <li key={recipe.id}
@@ -582,11 +582,11 @@ function Recipes() {
 
                                         {/* INGREDIENT SEARCH & ADD SECTION */}
                                         <div className="p-5 bg-stone-50 rounded-2xl border border-line">
-                                            <label className="block text-sm font-bold text-stone-400 uppercase mb-4 tracking-tighter">Add Ingredients from API</label>
+                                            <label className="block text-sm font-bold text-stone-600 uppercase mb-4 tracking-tighter">Add Ingredients from API</label>
 
                                             <div className="flex items-end gap-3 mb-6">
                                                 <div className="flex-1">
-                                                    <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1 ml-1">Search Food</label>
+                                                    <label className="block text-[10px] font-bold text-stone-600 uppercase mb-1 ml-1">Search Food</label>
                                                     <IngredientSearch key={selectedRecipe.id} hideLabel onSelect={(food) => {
                                                         setLastSelectedFood(food);
                                                         setErrors(prev => ({ ...prev, name: false })); // Clear the "name" error once picked
@@ -594,7 +594,7 @@ function Recipes() {
                                                     }} />
                                                 </div>
                                                 <div className="w-24">
-                                                    <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1 ml-1">Qty ({selectedUnit})</label>
+                                                    <label className="block text-[10px] font-bold text-stone-600 uppercase mb-1 ml-1">Qty ({selectedUnit})</label>
                                                     <input
                                                         type="number"
                                                         value={amount}
@@ -677,7 +677,7 @@ function Recipes() {
                                         <div>
                                             <label
                                                 htmlFor="recipe-name"
-                                                className="block text-sm font-bold text-stone-400 uppercase mb-2 tracking-tighter"
+                                                className="block text-sm font-bold text-stone-600 uppercase mb-2 tracking-tighter"
                                             >Recipe Name</label>
                                             <input
                                                 id="recipe-name"
@@ -700,7 +700,7 @@ function Recipes() {
                                         <div>
                                             <label
                                                 htmlFor="recipe-type"
-                                                className="block text-sm font-bold text-stone-400 uppercase mb-2 tracking-tighter"
+                                                className="block text-sm font-bold text-stone-600 uppercase mb-2 tracking-tighter"
                                             >Recipe Type</label>
                                             <select
                                                 id="recipe-type"
@@ -719,7 +719,7 @@ function Recipes() {
                                         <div>
                                             <label
                                                 htmlFor="base-servings"
-                                                className="block text-sm font-bold text-stone-400 uppercase mb-2 tracking-tighter"
+                                                className="block text-sm font-bold text-stone-600 uppercase mb-2 tracking-tighter"
                                             >Servings This Recipe Makes</label>
                                             <input
                                                 id="base-servings"
@@ -729,14 +729,14 @@ function Recipes() {
                                                 value={baseServings}
                                                 onChange={(e) => setBaseServings(Number(e.target.value) || 1)}
                                             />
-                                            <p className="text-[10px] font-bold text-stone-400 mt-1 ml-1">
+                                            <p className="text-[10px] font-bold text-stone-600 mt-1 ml-1">
                                                 Used to calculate nutrition per portion and leftovers.
                                             </p>
                                         </div>
 
                                         {/* Instructions Section */}
                                         <div>
-                                            <label className="block text-sm font-bold text-stone-400 uppercase mb-2 tracking-tighter">Cooking Instructions</label>
+                                            <label className="block text-sm font-bold text-stone-600 uppercase mb-2 tracking-tighter">Cooking Instructions</label>
                                             <textarea
                                                 className="w-full min-h-[150px] p-4 bg-stone-50 border border-line rounded-xl outline-none focus:border-accent transition-colors"
                                                 value={description}
@@ -752,7 +752,7 @@ function Recipes() {
                                 </div>
                             ) : (
                                 <div className="h-full flex flex-col items-center justify-center border-2 border-dashed border-line rounded-2xl p-12 text-center">
-                                                                        <h3 className="text-lg font-bold text-stone-400">Select a recipe to start cooking</h3>
+                                                                        <h3 className="text-lg font-bold text-stone-600">Select a recipe to start cooking</h3>
                                 </div>
                             )}
                         </div>

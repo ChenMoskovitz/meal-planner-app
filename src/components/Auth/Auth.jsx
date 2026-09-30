@@ -33,14 +33,14 @@ export default function Auth() {
                     <h1 className="text-3xl font-black text-stone-900 tracking-tighter">
                         {isSignUp ? 'Create Account' : 'Welcome Back'}
                     </h1>
-                    <p className="text-stone-400 text-sm font-medium mt-2">
+                    <p className="text-stone-600 text-sm font-medium mt-2">
                         {isSignUp ? 'Start your healthy journey today' : 'Log in to manage your meals'}
                     </p>
                 </div>
 
                 <form onSubmit={handleAuth} className="space-y-4">
                     <div>
-                        <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1 ml-1 tracking-widest text-stone-400">Email Address</label>
+                        <label className="block text-[10px] font-bold text-stone-600 uppercase mb-1 ml-1 tracking-widest text-stone-600">Email Address</label>
                         <input
                             className="w-full px-4 py-3 border border-line rounded-xl outline-none focus:border-accent transition-all font-medium text-stone-900"
                             type="email"
@@ -51,7 +51,7 @@ export default function Auth() {
                         />
                     </div>
                     <div>
-                        <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1 ml-1 tracking-widest text-stone-400">Password</label>
+                        <label className="block text-[10px] font-bold text-stone-600 uppercase mb-1 ml-1 tracking-widest text-stone-600">Password</label>
                         <input
                             className="w-full px-4 py-3 border border-line rounded-xl outline-none focus:border-accent transition-all font-medium text-stone-900"
                             type="password"
@@ -72,7 +72,7 @@ export default function Auth() {
 
                 <button
                     onClick={() => setIsSignUp(!isSignUp)}
-                    className="w-full mt-6 text-xs font-bold text-stone-400 hover:text-accent transition-colors uppercase tracking-widest"
+                    className="w-full mt-6 text-xs font-bold text-stone-600 hover:text-accent transition-colors uppercase tracking-widest"
                 >
                     {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
                 </button>
