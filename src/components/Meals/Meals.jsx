@@ -165,7 +165,7 @@ function Meals() {
                     {/* The Nutrition Card */}
                     {showNutrition && (
                         <div className="mt-4 p-5 bg-stone-900 text-white rounded-xl animate-in zoom-in-95 duration-200">
-                            <h4 className="text-xs font-black uppercase tracking-widest text-stone-400 mb-3">Meal Combo Totals</h4>
+                            <h4 className="text-xs font-black uppercase tracking-widest text-stone-600 mb-3">Meal Combo Totals</h4>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="flex flex-col">
                                     <span className="text-[10px] text-stone-300 uppercase font-bold">Calories</span>

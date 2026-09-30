@@ -40,7 +40,7 @@ function App() {
                         <h1 className="text-lg font-black text-stone-900 tracking-tight">
                             Meal Planner
                         </h1>
-                        <p className="text-stone-400 text-[10px] font-bold uppercase tracking-widest">
+                        <p className="text-stone-600 text-[10px] font-bold uppercase tracking-widest">
                             {session.user.email}
                         </p>
                     </div>

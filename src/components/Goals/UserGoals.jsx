@@ -80,12 +80,12 @@ function UserGoals() {
     return (
         <div className="p-6 bg-white rounded-2xl shadow-sm border border-line mb-6">
             <h2 className="text-xl font-black text-stone-900 mb-4 flex items-baseline gap-2">
-                Set Nutritional Targets <span className="text-xs font-normal text-stone-400">(Daily Per Person)</span>
+                Set Nutritional Targets <span className="text-xs font-normal text-stone-600">(Daily Per Person)</span>
             </h2>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div>
-                    <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1 ml-1">Max Calories</label>
+                    <label className="block text-[10px] font-bold text-stone-600 uppercase mb-1 ml-1">Max Calories</label>
                     <input
                         aria-label="Max Calories"
                         type="number"
@@ -95,7 +95,7 @@ function UserGoals() {
                     />
                 </div>
                 <div>
-                    <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1 ml-1">Min Protein (g)</label>
+                    <label className="block text-[10px] font-bold text-stone-600 uppercase mb-1 ml-1">Min Protein (g)</label>
                     <input
                         aria-label="Min Protein"
                         type="number"
@@ -105,7 +105,7 @@ function UserGoals() {
                     />
                 </div>
                 <div>
-                    <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1 ml-1">Min Fiber (g)</label>
+                    <label className="block text-[10px] font-bold text-stone-600 uppercase mb-1 ml-1">Min Fiber (g)</label>
                     <input
                         aria-label="Min Fiber"
                         type="number"
@@ -115,7 +115,7 @@ function UserGoals() {
                     />
                 </div>
                 <div>
-                    <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1 ml-1">Max Fat (g)</label>
+                    <label className="block text-[10px] font-bold text-stone-600 uppercase mb-1 ml-1">Max Fat (g)</label>
                     <input
                         aria-label="Max Fat"
                         type="number"

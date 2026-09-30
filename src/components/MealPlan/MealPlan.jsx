@@ -322,8 +322,9 @@ function MealPlan() {
                     <button className={`border px-4 py-2 rounded-xl text-sm font-semibold ${showWeeklyStats ? 'bg-accent text-white' : 'bg-white'}`} onClick={() => setShowWeeklyStats(!showWeeklyStats)}>{showWeeklyStats ? 'Hide Stats' : 'Show Stats'}</button>
 
                     <div className="ml-auto flex items-center gap-2 bg-accent-soft px-4 py-2 rounded-xl border border-accent-line">
-                        <label className="text-sm font-bold text-accent-dark uppercase tracking-tight">Planning for:</label>
+                        <label htmlFor="planned-servings" className="text-sm font-bold text-accent-dark uppercase tracking-tight">Planning for:</label>
                         <input
+                            id="planned-servings"
                             type="number"
                             min="1"
                             value={globalPlannedServings}
@@ -343,9 +344,9 @@ function MealPlan() {
                     const dayPlan = plan[dateStr];
 
                     return (
-                        <div key={dateStr} className={`relative p-3 rounded-xl border-2 transition-all ${isToday ? 'bg-blue-50 border-blue-200 ring-2 ring-blue-100' : 'bg-white border-line hover:border-line'}`}>
+                        <div key={dateStr} className={`relative p-3 rounded-xl border-2 transition-all ${isToday ? 'bg-accent-soft border-accent-line ring-2 ring-accent-line' : 'bg-white border-line hover:border-line'}`}>
                             <div className="text-center mb-3">
-                                <div className="text-[10px] font-bold text-stone-400 uppercase">{new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                                <div className="text-[10px] font-bold text-stone-600 uppercase">{new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' })}</div>
                                 <div className="text-lg font-bold text-stone-900">{new Date(dateStr + 'T00:00:00').getDate()}</div>
                             </div>
 
@@ -371,21 +372,21 @@ function MealPlan() {
                                             ) : null;
                                         })()}
 
-                                        {dayPlan.side && <div className="text-[11px] text-stone-600 mt-2 truncate"><span className="text-stone-400">Side</span> {dayPlan.side.name}</div>}
-                                        {dayPlan.veg && <div className="text-[11px] text-stone-600 mt-0.5 truncate"><span className="text-stone-400">Veg</span> {dayPlan.veg.name}</div>}
+                                        {dayPlan.side && <div className="text-[11px] text-stone-600 mt-2 truncate"><span className="text-stone-600">Side</span> {dayPlan.side.name}</div>}
+                                        {dayPlan.veg && <div className="text-[11px] text-stone-600 mt-0.5 truncate"><span className="text-stone-600">Veg</span> {dayPlan.veg.name}</div>}
 
                                         <div className="mt-3 pt-2 border-t border-stone-50 space-y-1">
                                             {dayPlan.main?.type !== 'full_meal' && (
                                                 <>
                                                     {!dayPlan.side && (
                                                         <button
-                                                            className="w-full text-[9px] font-bold py-1 bg-stone-50 text-stone-400 hover:bg-good-soft hover:text-good rounded transition-colors"
+                                                            className="w-full text-[9px] font-bold py-1 bg-stone-50 text-stone-600 hover:bg-good-soft hover:text-good rounded transition-colors"
                                                             onClick={() => addComponentToDay(dateStr, 'side', 'side')}
                                                         >+ Side</button>
                                                     )}
                                                     {!dayPlan.veg && (
                                                         <button
-                                                            className="w-full text-[9px] font-bold py-1 bg-stone-50 text-stone-400 hover:bg-good-soft hover:text-good rounded transition-colors"
+                                                            className="w-full text-[9px] font-bold py-1 bg-stone-50 text-stone-600 hover:bg-good-soft hover:text-good rounded transition-colors"
                                                             onClick={() => addComponentToDay(dateStr, 'veg', 'vegetable_side')}
                                                         >+ Veg</button>
                                                     )}
@@ -397,7 +398,7 @@ function MealPlan() {
                                 </div>
                             ) : (
                                 <div className="space-y-2">
-                                    <select className="w-full text-[10px] p-2 bg-stone-50 border border-line rounded-lg outline-none" onChange={(e) => {
+                                    <select aria-label={`Choose a main dish for ${dateStr}`} className="w-full text-[10px] p-2 bg-stone-50 border border-line rounded-lg outline-none" onChange={(e) => {
                                         const selected = recipes.find(r => r.id === e.target.value);
                                         setPlan(prev => ({ ...prev, [dateStr]: { main: selected } }));
                                     }}>
@@ -422,7 +423,7 @@ function MealPlan() {
                         {/* Calories */}
                         <div className="bg-stone-50 p-4 rounded-xl border border-line">
                             <div className="flex justify-between items-start mb-1">
-                                <span className="text-[10px] font-bold text-stone-400 uppercase">Avg Calories</span>
+                                <span className="text-[10px] font-bold text-stone-600 uppercase">Avg Calories</span>
                                 <span className="text-[10px] font-bold text-black bg-stone-200 px-1.5 py-0.5 rounded">Goal: {nutritionalGoals.target_calories}</span>
                             </div>
                             <div className={`text-xl font-bold ${dailyAverage.calories > nutritionalGoals.target_calories ? 'text-bad' : 'text-good'}`}>
@@ -439,7 +440,7 @@ function MealPlan() {
                         {/* Protein */}
                         <div className="bg-stone-50 p-4 rounded-xl border border-line">
                             <div className="flex justify-between items-start mb-1">
-                                <span className="text-[10px] font-bold text-stone-400 uppercase">Avg Protein</span>
+                                <span className="text-[10px] font-bold text-stone-600 uppercase">Avg Protein</span>
                                 <span className="text-[10px] font-bold text-black bg-stone-200 px-1.5 py-0.5 rounded">Goal: {nutritionalGoals.min_protein}g</span>
                             </div>
                             <div className={`text-xl font-bold ${dailyAverage.protein >= nutritionalGoals.min_protein ? 'text-good' : 'text-warn'}`}>
@@ -456,7 +457,7 @@ function MealPlan() {
                         {/* Fiber */}
                         <div className="bg-stone-50 p-4 rounded-xl border border-line">
                             <div className="flex justify-between items-start mb-1">
-                                <span className="text-[10px] font-bold text-stone-400 uppercase">Avg Fiber</span>
+                                <span className="text-[10px] font-bold text-stone-600 uppercase">Avg Fiber</span>
                                 <span className="text-[10px] font-bold text-black bg-stone-200 px-1.5 py-0.5 rounded">Goal: {nutritionalGoals.min_fiber}g</span>
                             </div>
                             <div className={`text-xl font-bold ${dailyAverage.fiber >= nutritionalGoals.min_fiber ? 'text-good' : 'text-warn'}`}>
@@ -474,7 +475,7 @@ function MealPlan() {
                             reads as bad, unlike protein and fiber above. */}
                         <div className="bg-stone-50 p-4 rounded-xl border border-line">
                             <div className="flex justify-between items-start mb-1">
-                                <span className="text-[10px] font-bold text-stone-400 uppercase">Avg Fat</span>
+                                <span className="text-[10px] font-bold text-stone-600 uppercase">Avg Fat</span>
                                 <span className="text-[10px] font-bold text-black bg-stone-200 px-1.5 py-0.5 rounded">Goal: {nutritionalGoals.max_fat}g</span>
                             </div>
                             <div className={`text-xl font-bold ${dailyAverage.fat > nutritionalGoals.max_fat ? 'text-bad' : 'text-good'}`}>
@@ -512,7 +513,7 @@ function MealPlan() {
 
                         <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                             {shoppingList.length === 0 && (
-                                <div className="text-center py-10 bg-white rounded-2xl border border-dashed border-line text-stone-400 font-medium">
+                                <div className="text-center py-10 bg-white rounded-2xl border border-dashed border-line text-stone-600 font-medium">
                                     Click the button above to see what you need...
                                 </div>
                             )}
@@ -534,14 +535,14 @@ function MealPlan() {
                     <div className="w-full md:w-96 bg-white rounded-2xl p-6 border border-line shadow-lg self-start sticky top-8">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-stone-900 font-black text-lg tracking-tight">Final List</h3>
-                            <span className="bg-stone-100 text-stone-500 text-[10px] font-bold px-2 py-1 rounded-lg uppercase">
+                            <span className="bg-stone-100 text-stone-600 text-[10px] font-bold px-2 py-1 rounded-lg uppercase">
                     {permanentList.length} items
                 </span>
                         </div>
 
                         <div className="space-y-3">
                             {permanentList.length === 0 ? (
-                                <p className="text-stone-400 text-xs font-medium py-12 text-center border-2 border-dashed border-line rounded-2xl">
+                                <p className="text-stone-600 text-xs font-medium py-12 text-center border-2 border-dashed border-line rounded-2xl">
                                     Your list is empty. Add items from the left!
                                 </p>
                             ) : (
@@ -569,7 +570,7 @@ function MealPlan() {
                                                 {item.item_name}
                                             </p>
                                             <p className={`text-[9px] font-bold uppercase tracking-tight 
-                                    ${item.is_bought ? 'text-stone-200' : 'text-stone-400'}`}>
+                                    ${item.is_bought ? 'text-stone-200' : 'text-stone-600'}`}>
                                                 {item.amount}
                                             </p>
                                         </div>
@@ -603,7 +604,7 @@ function MealPlan() {
                                     }
                                     fetchPermanentList();
                                 }}
-                                className="w-full mt-8 py-3 text-[10px] font-bold text-stone-400 hover:text-bad hover:bg-bad-soft rounded-xl uppercase tracking-widest transition-all border border-transparent hover:border-bad-soft"
+                                className="w-full mt-8 py-3 text-[10px] font-bold text-stone-600 hover:text-bad hover:bg-bad-soft rounded-xl uppercase tracking-widest transition-all border border-transparent hover:border-bad-soft"
                             >
                                 Clear All Items
                             </button>

@@ -98,8 +98,9 @@ function Pantry() {
 
                 <div className="flex gap-2">
                     <div className="w-24">
-                        <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1">Qty</label>
+                        <label htmlFor="pantry-quantity" className="block text-[10px] font-bold text-stone-600 uppercase mb-1">Qty</label>
                         <input
+                            id="pantry-quantity"
                             className="w-full px-4 py-2 border border-stone-300 rounded-lg outline-none"
                             type="number"
                             value={quantity}
@@ -108,8 +109,9 @@ function Pantry() {
                     </div>
 
                     <div>
-                        <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1">Unit</label>
+                        <label htmlFor="pantry-unit" className="block text-[10px] font-bold text-stone-600 uppercase mb-1">Unit</label>
                         <select
+                            id="pantry-unit"
                             className="px-3 py-2 border border-stone-300 rounded-lg bg-white outline-none"
                             value={unitType}
                             onChange={(e) => setUnitType(e.target.value)}
