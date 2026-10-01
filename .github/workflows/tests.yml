@@ -31,6 +31,28 @@ jobs:
 
       - run: npm test
 
+  # The MCP server is a separate Node package with its own dependency tree, so
+  # the root `npm ci` above does not install it. Its own job keeps a failure here
+  # from reading as a broken React app.
+  mcp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: mcp/package-lock.json
+
+      - run: npm ci
+        working-directory: mcp
+
+      - run: npm test
+        working-directory: mcp
+
   playwright:
     runs-on: ubuntu-latest
     timeout-minutes: 15
