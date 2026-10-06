@@ -1,58 +1,46 @@
 /**
- * MCP server for the meal planner.
+ * MCP server entry point for the meal planner.
  *
- * This is a plain Node program, not part of the Vite app. An MCP client — Claude
+ * A plain Node program, not part of the Vite app. An MCP client — Claude
  * Desktop, Claude Code — starts it as a child process and talks to it over
  * stdin/stdout using JSON-RPC. Nothing listens on a port.
  *
  * Because stdout IS the protocol channel, console.log() here would corrupt every
- * message. Anything you want to print for yourself goes to stderr
- * (console.error), which the client shows in its logs and ignores otherwise.
+ * message. Anything printed for a human goes to stderr (console.error), which
+ * the client surfaces in its logs.
  *
- * Step 1 deliberately has one tool that touches nothing: the point is to see the
- * client reach this file and run this code. Supabase comes next.
+ * The server itself is built in create-server.js; this file only wires the real
+ * database to it and opens the transport.
  */
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { z } from 'zod';
+import { createServer } from './create-server.js';
+import { signedInClient } from './supabase.js';
 
-const server = new McpServer({
-    name: 'meal-planner',
-    version: '0.1.0'
-});
+/**
+ * Signs in on the first tool call and reuses the session after that.
+ *
+ * Deferred rather than done at startup so bad credentials produce a readable
+ * tool error instead of a server that dies before the client can say why. The
+ * promise is cached, not the result, so two tool calls arriving together share
+ * one sign-in rather than racing.
+ */
+let session = null;
 
-// A tool is a function the model may choose to call. The description is not a
-// comment — it is the only thing the model reads when deciding whether this tool
-// is the right one, so it is part of the interface.
-server.registerTool(
-    'ping',
-    {
-        title: 'Ping the meal planner',
-        description:
-            'Check that the meal planner MCP server is running. Returns a confirmation message. Use this to verify the connection works.',
-        // Zod schemas become the JSON Schema the model sees. An optional field
-        // here proves arguments arrive, rather than only that the call happened.
-        inputSchema: {
-            name: z
-                .string()
-                .optional()
-                .describe('Optional name to greet in the reply')
-        }
-    },
-    async ({ name }) => ({
-        content: [
-            {
-                type: 'text',
-                text: name
-                    ? `Meal planner MCP server is running. Hello, ${name}.`
-                    : 'Meal planner MCP server is running.'
-            }
-        ]
-    })
-);
+async function getClient() {
+    if (!session) {
+        session = signedInClient().catch(error => {
+            // Clearing the cache lets the next call retry; keeping a rejected
+            // promise would make one transient failure permanent.
+            session = null;
+            throw error;
+        });
+    }
 
-const transport = new StdioServerTransport();
-await server.connect(transport);
+    return (await session).client;
+}
 
-// Confirms startup without writing to stdout, where it would break the protocol.
+const server = createServer({ getClient });
+
+await server.connect(new StdioServerTransport());
+
 console.error('meal-planner MCP server ready on stdio');
