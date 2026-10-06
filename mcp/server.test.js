@@ -1,171 +1,222 @@
 /**
  * Protocol tests for the MCP server.
  *
- * These spawn the real server as a child process and speak JSON-RPC over its
- * stdin/stdout, which is exactly what an MCP client does. Testing through the
- * protocol rather than by importing the tool functions is the point: a tool can
- * be perfectly correct and still be unusable because its schema is wrong or it
- * never got registered, and only the handshake catches that.
+ * Two layers, because they fail for different reasons:
  *
- * Uses node:test, so there is no test dependency to install.
+ * - "the real executable" spawns server.js as a child process over stdio,
+ *   exactly as a client does. This is the only test that proves the entry point
+ *   starts, that stdout carries clean JSON-RPC, and that the tools are
+ *   registered on the thing the client config actually points at.
+ * - "with a fake database" builds the server in-process over an in-memory
+ *   transport and injects a fake Supabase client, so tool behaviour can be
+ *   tested without credentials. CI has no secrets, so this is the only way
+ *   list_recipes can be covered there at all.
+ *
+ * Both use the SDK's own Client rather than hand-written JSON-RPC: it performs
+ * the handshake and matches responses to requests, so a bug in the test harness
+ * cannot masquerade as a bug in the server.
  */
-import { test, describe } from 'node:test';
+import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport, getDefaultEnvironment } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { createServer } from './create-server.js';
+import { fakeSupabase } from './fake-supabase.js';
 
-const SERVER = path.join(path.dirname(fileURLToPath(import.meta.url)), 'server.js');
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 
-const PROTOCOL_VERSION = '2025-06-18';
+const RECIPES = [
+    { id: 'r2', name: 'Chicken soup', type: 'main_dish', base_servings: 4 },
+    { id: 'r1', name: 'Almond salad', type: 'side', base_servings: 2 }
+];
 
-/**
- * Starts the server, runs the handshake, and returns a `call` function.
- *
- * Responses are matched by JSON-RPC id rather than by arrival order, because
- * nothing in the protocol promises a server answers in the order it was asked.
- */
-async function connect() {
-    const child = spawn(process.execPath, [SERVER], { stdio: ['pipe', 'pipe', 'pipe'] });
+/** Connects a client to an in-process server backed by `client` as its database. */
+async function connectWithDatabase(database) {
+    const server = createServer({ getClient: async () => database });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
 
-    const pending = new Map();
-    let buffer = '';
+    const mcp = new Client({ name: 'server.test.js', version: '1.0.0' });
+    await Promise.all([server.connect(serverTransport), mcp.connect(clientTransport)]);
 
-    child.stdout.on('data', chunk => {
-        buffer += chunk;
-
-        // Messages are newline-delimited, and a chunk can split one in half or
-        // carry several at once.
-        let newline;
-        while ((newline = buffer.indexOf('\n')) !== -1) {
-            const line = buffer.slice(0, newline).trim();
-            buffer = buffer.slice(newline + 1);
-            if (!line) continue;
-
-            const message = JSON.parse(line);
-            const resolve = pending.get(message.id);
-            if (resolve) {
-                pending.delete(message.id);
-                resolve(message);
-            }
-        }
-    });
-
-    let nextId = 1;
-
-    const send = (method, params) => {
-        const id = nextId++;
-        const message = { jsonrpc: '2.0', id, method, params };
-
-        return new Promise((resolve, reject) => {
-            // Without this a bug in the server hangs the suite until the runner
-            // gives up, with no indication of which call never came back.
-            const timer = setTimeout(
-                () => reject(new Error(`No response to ${method} within 5s`)),
-                5000
-            );
-            pending.set(id, value => {
-                clearTimeout(timer);
-                resolve(value);
-            });
-            child.stdin.write(`${JSON.stringify(message)}\n`);
-        });
-    };
-
-    const notify = (method) => {
-        child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method })}\n`);
-    };
-
-    const initialized = await send('initialize', {
-        protocolVersion: PROTOCOL_VERSION,
-        capabilities: {},
-        clientInfo: { name: 'server.test.js', version: '1.0.0' }
-    });
-    notify('notifications/initialized');
-
-    return { send, initialized, close: () => child.kill() };
+    return mcp;
 }
 
-describe('meal-planner MCP server', () => {
-    test('completes the initialize handshake', async () => {
-        const { initialized, close } = await connect();
+describe('the real executable', () => {
+    let mcp;
 
-        try {
-            assert.equal(initialized.result.serverInfo.name, 'meal-planner');
-            assert.equal(initialized.result.protocolVersion, PROTOCOL_VERSION);
-            // A server with no registered tools still handshakes, so the
-            // capability is what tells a client there is anything to call.
-            assert.ok(initialized.result.capabilities.tools);
-        } finally {
-            close();
-        }
+    before(async () => {
+        // No credentials are passed. The server signs in lazily, so it must
+        // start and serve ping and tools/list without them — which is also what
+        // makes this suite runnable in CI.
+        const transport = new StdioClientTransport({
+            command: process.execPath,
+            args: [path.join(HERE, 'server.js')]
+        });
+
+        mcp = new Client({ name: 'server.test.js', version: '1.0.0' });
+        await mcp.connect(transport);
     });
 
-    test('advertises ping with a described, non-required argument', async () => {
-        const { send, close } = await connect();
+    after(async () => {
+        await mcp?.close();
+    });
 
-        try {
-            const { result } = await send('tools/list', {});
-            const ping = result.tools.find(tool => tool.name === 'ping');
+    test('reports its name through the handshake', () => {
+        assert.equal(mcp.getServerVersion().name, 'meal-planner');
+    });
 
-            assert.ok(ping, 'ping is not in tools/list');
+    test('advertises both tools', async () => {
+        const { tools } = await mcp.listTools();
+        const names = tools.map(tool => tool.name).sort();
 
-            // The description is the only thing the model reads when choosing a
-            // tool, so an empty one is a broken interface, not a style problem.
-            assert.ok(ping.description?.length > 20, 'ping needs a real description');
+        assert.deepEqual(names, ['list_recipes', 'ping']);
+    });
 
-            assert.equal(ping.inputSchema.properties.name.type, 'string');
+    test('describes every tool well enough for a model to choose it', async () => {
+        const { tools } = await mcp.listTools();
+
+        for (const tool of tools) {
+            // The description is the only thing the model reads when deciding
+            // whether a tool fits, so an empty one is a broken interface.
             assert.ok(
-                !ping.inputSchema.required?.includes('name'),
-                'name is optional and must not be required'
+                tool.description && tool.description.length > 30,
+                `${tool.name} needs a real description`
             );
-        } finally {
-            close();
         }
     });
 
-    test('answers ping without an argument', async () => {
-        const { send, close } = await connect();
+    test('offers the recipe type filter as an enum of the real column values', async () => {
+        const { tools } = await mcp.listTools();
+        const listRecipes = tools.find(tool => tool.name === 'list_recipes');
 
-        try {
-            const { result } = await send('tools/call', { name: 'ping', arguments: {} });
+        assert.deepEqual(listRecipes.inputSchema.properties.type.enum, [
+            'full_meal',
+            'main_dish',
+            'side',
+            'vegetable_side'
+        ]);
+        assert.ok(
+            !listRecipes.inputSchema.required?.includes('type'),
+            'the filter is optional and must not be required'
+        );
+    });
 
-            assert.equal(result.isError, undefined);
-            assert.match(result.content[0].text, /running/);
-        } finally {
-            close();
+    test('marks the read-only tools as read-only', async () => {
+        const { tools } = await mcp.listTools();
+
+        // Clients use these hints to decide how much to interrupt the user. A
+        // write tool added later without updating them would be auto-approved.
+        for (const tool of tools) {
+            assert.equal(tool.annotations?.readOnlyHint, true, `${tool.name}`);
         }
     });
 
-    test('passes the name argument through to the reply', async () => {
-        const { send, close } = await connect();
+    test('answers ping over real stdio', async () => {
+        const result = await mcp.callTool({ name: 'ping', arguments: { name: 'Chen' } });
+
+        assert.notEqual(result.isError, true);
+        assert.match(result.content[0].text, /Hello, Chen/);
+    });
+
+    test('reports missing credentials as a readable tool error', async () => {
+        // Blanking the variable rather than relying on an absent .env: loadEnv
+        // resolves the file from the module's own directory, so the project's
+        // real .env is found no matter where the test runs from. An empty value
+        // already set in the environment wins over the file, which is the
+        // behaviour that lets a client or CI override it.
+        const transport = new StdioClientTransport({
+            command: process.execPath,
+            args: [path.join(HERE, 'server.js')],
+            env: { ...getDefaultEnvironment(), VITE_SUPABASE_URL: '' }
+        });
+
+        const unconfigured = new Client({ name: 'server.test.js', version: '1.0.0' });
+        await unconfigured.connect(transport);
 
         try {
-            const { result } = await send('tools/call', {
-                name: 'ping',
-                arguments: { name: 'Chen' }
-            });
+            // The server must still start and serve the handshake — a
+            // credentials problem is a tool-level failure, not a dead server.
+            assert.equal(unconfigured.getServerVersion().name, 'meal-planner');
 
-            assert.match(result.content[0].text, /Hello, Chen/);
+            const result = await unconfigured.callTool({ name: 'list_recipes', arguments: {} });
+
+            assert.equal(result.isError, true);
+            assert.match(result.content[0].text, /VITE_SUPABASE_URL/);
         } finally {
-            close();
+            await unconfigured.close();
         }
     });
 
-    test('reports an unknown tool as an error instead of hanging', async () => {
-        const { send, close } = await connect();
+    test('still answers a tool that needs no credentials', async () => {
+        const result = await mcp.callTool({ name: 'ping', arguments: {} });
 
-        try {
-            const response = await send('tools/call', { name: 'no_such_tool', arguments: {} });
+        assert.notEqual(result.isError, true);
+    });
+});
 
-            // The SDK answers rather than throwing, so a client gets a usable
-            // failure. Either shape is valid; silence is not.
-            assert.ok(
-                response.error || response.result?.isError,
-                'an unknown tool should come back as an error'
-            );
-        } finally {
-            close();
-        }
+describe('with a fake database', () => {
+    test('lists the recipes it is given', async () => {
+        const mcp = await connectWithDatabase(fakeSupabase({ recipes: RECIPES }));
+
+        const result = await mcp.callTool({ name: 'list_recipes', arguments: {} });
+
+        assert.notEqual(result.isError, true);
+        assert.match(result.content[0].text, /Chicken soup/);
+        assert.match(result.content[0].text, /Almond salad/);
+        await mcp.close();
+    });
+
+    test('passes the type filter through to the query', async () => {
+        const database = fakeSupabase({ recipes: RECIPES });
+        const mcp = await connectWithDatabase(database);
+
+        const result = await mcp.callTool({
+            name: 'list_recipes',
+            arguments: { type: 'side' }
+        });
+
+        assert.match(result.content[0].text, /Almond salad/);
+        assert.doesNotMatch(result.content[0].text, /Chicken soup/);
+        assert.equal(database.calls[0].filters.type, 'side');
+        await mcp.close();
+    });
+
+    test('rejects a type the column cannot hold', async () => {
+        const mcp = await connectWithDatabase(fakeSupabase({ recipes: RECIPES }));
+
+        // The enum is enforced before the handler runs, so a bad filter never
+        // reaches the database.
+        const result = await mcp.callTool({
+            name: 'list_recipes',
+            arguments: { type: 'dessert' }
+        });
+
+        assert.equal(result.isError, true);
+        await mcp.close();
+    });
+
+    test('says so plainly when the account has no recipes', async () => {
+        const mcp = await connectWithDatabase(fakeSupabase({ recipes: [] }));
+
+        const result = await mcp.callTool({ name: 'list_recipes', arguments: {} });
+
+        assert.notEqual(result.isError, true);
+        assert.match(result.content[0].text, /No recipes found/);
+        await mcp.close();
+    });
+
+    test('turns a database failure into a tool error, not a crash', async () => {
+        const mcp = await connectWithDatabase(
+            fakeSupabase({ error: { message: 'JWT expired' } })
+        );
+
+        const result = await mcp.callTool({ name: 'list_recipes', arguments: {} });
+
+        assert.equal(result.isError, true);
+        assert.match(result.content[0].text, /JWT expired/);
+        await mcp.close();
     });
 });
