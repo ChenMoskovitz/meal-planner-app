@@ -8,6 +8,8 @@
  * Takes a Supabase client as an argument so the tests can pass a fake.
  */
 
+import { lookupNutrition, EMPTY_NUTRITION } from './nutrition.js';
+
 export const UNITS = ['g', 'ml'];
 
 /**
@@ -51,7 +53,7 @@ export async function findRecipe(client, name) {
  * conflict with another user's row would be rejected by row-level security
  * instead of resolving. A lookup only ever sees this account's own rows.
  */
-export async function findOrCreateIngredient(client, { name, unit = 'g' }) {
+export async function findOrCreateIngredient(client, { name, unit = 'g', lookup = lookupNutrition }) {
     const { data: existing, error: lookupError } = await client
         .from('ingredients')
         .select('id, name, unit_type')
@@ -62,14 +64,24 @@ export async function findOrCreateIngredient(client, { name, unit = 'g' }) {
 
     if (existing?.length) return { ingredient: existing[0], created: false };
 
+    // Nutrition is fetched only for a brand-new ingredient. The *_per_unit
+    // columns are what the whole nutrition feature reads, and an ingredient
+    // stored with zeros makes every recipe containing it report no calories at
+    // all — silently, because zero is a valid number.
+    const { found, reason, label, ...nutrition } = await lookup(name).catch(() => ({
+        ...EMPTY_NUTRITION,
+        found: false,
+        reason: 'the nutrition lookup failed'
+    }));
+
     const { data: inserted, error: insertError } = await client
         .from('ingredients')
-        .insert([{ name, unit_type: unit, stock_quantity: 0 }])
+        .insert([{ name, unit_type: unit, stock_quantity: 0, ...nutrition }])
         .select('id, name, unit_type');
 
     if (insertError) throw new Error(`Could not add "${name}" to the pantry: ${insertError.message}`);
 
-    return { ingredient: inserted[0], created: true };
+    return { ingredient: inserted[0], created: true, nutritionFound: found, nutritionReason: reason };
 }
 
 /**
@@ -125,15 +137,18 @@ export async function addIngredientToRecipe(client, { recipeId, ingredientId, am
  * Reports the pantry ingredient being new, because that is a side effect the
  * user did not ask for and should hear about.
  */
-export async function addIngredient(client, { recipe: recipeName, ingredient: ingredientName, amount, unit }) {
+export async function addIngredient(
+    client,
+    { recipe: recipeName, ingredient: ingredientName, amount, unit, lookup = lookupNutrition }
+) {
     const found = await findRecipe(client, recipeName);
 
     if (!found.ok) return { ok: false, message: found.reason };
 
-    const { ingredient, created } = await findOrCreateIngredient(client, {
-        name: ingredientName,
-        unit
-    });
+    const { ingredient, created, nutritionFound, nutritionReason } = await findOrCreateIngredient(
+        client,
+        { name: ingredientName, unit, lookup }
+    );
 
     const result = await addIngredientToRecipe(client, {
         recipeId: found.recipe.id,
@@ -142,7 +157,15 @@ export async function addIngredient(client, { recipe: recipeName, ingredient: in
     });
 
     const unitLabel = ingredient.unit_type ?? '';
-    const note = created ? ` "${ingredient.name}" was new, so it was added to the pantry too.` : '';
+
+    // A new pantry ingredient is a side effect the user did not ask for, and a
+    // missing nutrition figure is worth saying out loud rather than leaving them
+    // to wonder later why a recipe reports no calories.
+    const note = created
+        ? nutritionFound
+            ? ` "${ingredient.name}" was new, so it was added to the pantry with its nutrition data.`
+            : ` "${ingredient.name}" was new, so it was added to the pantry — but ${nutritionReason}, so its nutrition values are zero.`
+        : '';
 
     const message = result.increased
         ? `${found.recipe.name} already had ${ingredient.name}, so the amount went from ${result.previousAmount}${unitLabel} to ${result.amount}${unitLabel}.${note}`

@@ -62,8 +62,6 @@ jobs:
       VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
       VITE_EDAMAM_FOOD_ID: ${{ secrets.VITE_EDAMAM_FOOD_ID }}
       VITE_EDAMAM_FOOD_KEY: ${{ secrets.VITE_EDAMAM_FOOD_KEY }}
-      VITE_EDAMAM_APP_ID: ${{ secrets.VITE_EDAMAM_APP_ID }}
-      VITE_EDAMAM_APP_KEY: ${{ secrets.VITE_EDAMAM_APP_KEY }}
       TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
       TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
 
