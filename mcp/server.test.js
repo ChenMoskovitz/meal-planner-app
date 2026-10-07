@@ -68,11 +68,11 @@ describe('the real executable', () => {
         assert.equal(mcp.getServerVersion().name, 'meal-planner');
     });
 
-    test('advertises both tools', async () => {
+    test('advertises every tool', async () => {
         const { tools } = await mcp.listTools();
         const names = tools.map(tool => tool.name).sort();
 
-        assert.deepEqual(names, ['list_recipes', 'ping']);
+        assert.deepEqual(names, ['add_ingredient', 'list_recipes', 'ping']);
     });
 
     test('describes every tool well enough for a model to choose it', async () => {
@@ -104,13 +104,32 @@ describe('the real executable', () => {
         );
     });
 
-    test('marks the read-only tools as read-only', async () => {
+    // Clients use these hints to decide how much to interrupt the user, so a
+    // tool that writes must not be able to arrive claiming to be a lookup. The
+    // list is spelled out rather than derived, so adding a tool fails here until
+    // someone states which kind it is.
+    const READ_ONLY = { ping: true, list_recipes: true, add_ingredient: false };
+
+    test('declares which tools write', async () => {
         const { tools } = await mcp.listTools();
 
-        // Clients use these hints to decide how much to interrupt the user. A
-        // write tool added later without updating them would be auto-approved.
         for (const tool of tools) {
-            assert.equal(tool.annotations?.readOnlyHint, true, `${tool.name}`);
+            assert.equal(
+                tool.annotations?.readOnlyHint,
+                READ_ONLY[tool.name],
+                `${tool.name} has the wrong readOnlyHint`
+            );
+        }
+    });
+
+    test('covers every tool in the read-only table', async () => {
+        const { tools } = await mcp.listTools();
+
+        for (const tool of tools) {
+            assert.ok(
+                tool.name in READ_ONLY,
+                `${tool.name} is not listed in READ_ONLY — say whether it writes`
+            );
         }
     });
 
@@ -180,7 +199,7 @@ describe('with a fake database', () => {
 
         assert.match(result.content[0].text, /Almond salad/);
         assert.doesNotMatch(result.content[0].text, /Chicken soup/);
-        assert.equal(database.calls[0].filters.type, 'side');
+        assert.equal(database.calls[0].where.type, 'side');
         await mcp.close();
     });
 
@@ -205,6 +224,91 @@ describe('with a fake database', () => {
 
         assert.notEqual(result.isError, true);
         assert.match(result.content[0].text, /No recipes found/);
+        await mcp.close();
+    });
+
+    test('adds an ingredient to a recipe', async () => {
+        const database = fakeSupabase({ recipes: [{ id: 'soup', name: 'Chicken soup' }] });
+        const mcp = await connectWithDatabase(database);
+
+        const result = await mcp.callTool({
+            name: 'add_ingredient',
+            arguments: { recipe: 'Chicken soup', ingredient: 'Onion', amount: 200 }
+        });
+
+        assert.notEqual(result.isError, true);
+        assert.match(result.content[0].text, /Added 200g Onion to Chicken soup/);
+        assert.equal(database.tables.recipe_ingredients.length, 1);
+        await mcp.close();
+    });
+
+    test('does not create the ingredient twice when two calls race', async () => {
+        // A model can emit several tool calls in one turn and a client may run
+        // them concurrently. Both would look up a new ingredient, both would
+        // find nothing, and both would insert it — which is how "Lemon" and
+        // "lemon" first ended up side by side in the real pantry.
+        const database = fakeSupabase({
+            recipes: [
+                { id: 'soup', name: 'Chicken soup' },
+                { id: 'salad', name: 'Israeli salad' }
+            ]
+        });
+        const mcp = await connectWithDatabase(database);
+
+        await Promise.all([
+            mcp.callTool({
+                name: 'add_ingredient',
+                arguments: { recipe: 'Chicken soup', ingredient: 'Onion', amount: 200 }
+            }),
+            mcp.callTool({
+                name: 'add_ingredient',
+                arguments: { recipe: 'Israeli salad', ingredient: 'onion', amount: 50 }
+            })
+        ]);
+
+        assert.equal(database.tables.ingredients.length, 1, 'the pantry should hold one onion');
+        assert.equal(database.tables.recipe_ingredients.length, 2, 'both recipes should have it');
+        await mcp.close();
+    });
+
+    test('rejects an amount of zero before it reaches the database', async () => {
+        const database = fakeSupabase({ recipes: [{ id: 'soup', name: 'Chicken soup' }] });
+        const mcp = await connectWithDatabase(database);
+
+        const result = await mcp.callTool({
+            name: 'add_ingredient',
+            arguments: { recipe: 'Chicken soup', ingredient: 'Onion', amount: 0 }
+        });
+
+        assert.equal(result.isError, true);
+        assert.equal(database.tables.recipe_ingredients.length, 0);
+        await mcp.close();
+    });
+
+    test('rejects a unit the pantry does not use', async () => {
+        const mcp = await connectWithDatabase(
+            fakeSupabase({ recipes: [{ id: 'soup', name: 'Chicken soup' }] })
+        );
+
+        const result = await mcp.callTool({
+            name: 'add_ingredient',
+            arguments: { recipe: 'Chicken soup', ingredient: 'Onion', amount: 200, unit: 'cups' }
+        });
+
+        assert.equal(result.isError, true);
+        await mcp.close();
+    });
+
+    test('reports an unknown recipe as an error the model can relay', async () => {
+        const mcp = await connectWithDatabase(fakeSupabase({ recipes: [] }));
+
+        const result = await mcp.callTool({
+            name: 'add_ingredient',
+            arguments: { recipe: 'Beef wellington', ingredient: 'Onion', amount: 200 }
+        });
+
+        assert.equal(result.isError, true);
+        assert.match(result.content[0].text, /list_recipes/);
         await mcp.close();
     });
 

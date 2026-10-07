@@ -44,7 +44,7 @@ describe('listRecipes', () => {
         const result = await listRecipes(client, { type: 'side' });
 
         assert.deepEqual(result.map(r => r.name), ['Almond salad']);
-        assert.equal(client.calls[0].filters.type, 'side');
+        assert.equal(client.calls[0].where.type, 'side');
     });
 
     test('does not filter when type is undefined', async () => {
@@ -52,7 +52,7 @@ describe('listRecipes', () => {
 
         await listRecipes(client, { type: undefined });
 
-        assert.deepEqual(client.calls[0].filters, {});
+        assert.deepEqual(client.calls[0].where, {});
     });
 
     test('throws when Supabase reports an error', async () => {

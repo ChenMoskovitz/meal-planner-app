@@ -9,6 +9,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { listRecipes, formatRecipeList, RECIPE_TYPES } from './recipes.js';
+import { addIngredient, UNITS } from './ingredients.js';
 
 /**
  * A tool failure has to come back as a result with isError, not a thrown
@@ -20,12 +21,40 @@ function toolError(message) {
 }
 
 /**
+ * Runs write operations one at a time.
+ *
+ * add_ingredient looks an ingredient up and then inserts it if it is missing.
+ * A client may run several tool calls from one turn concurrently, and two calls
+ * naming the same new ingredient would both see it missing and both insert it —
+ * which is exactly what happened the first time this was tried against the real
+ * database, leaving "Lemon" and "lemon" side by side in the pantry.
+ *
+ * A queue is enough because this server is a single process per client. The
+ * durable fix is a unique index on the ingredient name per user, which would
+ * make the database reject the second insert outright; until that exists, this
+ * stops the server from racing against itself.
+ */
+function createWriteQueue() {
+    let tail = Promise.resolve();
+
+    return function serialize(work) {
+        // The queue advances whether the work succeeded or failed; a rejection
+        // must not stop everything behind it.
+        const result = tail.then(work, work);
+        tail = result.then(() => {}, () => {});
+
+        return result;
+    };
+}
+
+/**
  * @param getClient - returns a signed-in Supabase client. Called per tool
  *   invocation rather than at startup so a credentials problem surfaces as a
  *   readable tool error instead of preventing the server from starting at all.
  */
 export function createServer({ getClient }) {
-    const server = new McpServer({ name: 'meal-planner', version: '0.2.0' });
+    const server = new McpServer({ name: 'meal-planner', version: '0.3.0' });
+    const serialize = createWriteQueue();
 
     server.registerTool(
         'ping',
@@ -75,6 +104,58 @@ export function createServer({ getClient }) {
                 const recipes = await listRecipes(client, { type });
 
                 return { content: [{ type: 'text', text: formatRecipeList(recipes, { type }) }] };
+            } catch (error) {
+                return toolError(error.message);
+            }
+        }
+    );
+
+    server.registerTool(
+        'add_ingredient',
+        {
+            title: 'Add an ingredient to a recipe',
+            description:
+                "Add an ingredient to one of the user's recipes, with an amount. If the ingredient is not in their pantry yet it is created there first, so it can be used by any recipe. If the recipe already contains that ingredient the amounts are added together rather than listed twice. Amounts feed the per-serving nutrition and the weekly shopping list, so they should be what the recipe actually calls for.",
+            inputSchema: {
+                recipe: z
+                    .string()
+                    .min(1)
+                    .describe('The exact name of the recipe, as returned by list_recipes.'),
+                ingredient: z
+                    .string()
+                    .min(1)
+                    .describe('The ingredient name, for example "onion" or "olive oil".'),
+                amount: z
+                    .number()
+                    .positive()
+                    .describe('How much the recipe uses, in the ingredient\'s unit.'),
+                unit: z
+                    .enum(UNITS)
+                    .optional()
+                    .describe(
+                        'Unit for a new pantry ingredient: g for solids, ml for liquids. Defaults to g. Ignored when the ingredient already exists, since it keeps the unit it was created with.'
+                    )
+            },
+            // The first tool here that writes. readOnlyHint false is what tells a
+            // client to ask before running it rather than treating it as a lookup.
+            annotations: {
+                readOnlyHint: false,
+                destructiveHint: false,
+                idempotentHint: false,
+                openWorldHint: false
+            }
+        },
+        async ({ recipe, ingredient, amount, unit }) => {
+            try {
+                const result = await serialize(async () =>
+                    addIngredient(await getClient(), { recipe, ingredient, amount, unit })
+                );
+
+                // A recipe that does not exist is the user's problem to fix, not a
+                // failure of the server, but it still has to read as "did not work".
+                return result.ok
+                    ? { content: [{ type: 'text', text: result.message }] }
+                    : toolError(result.message);
             } catch (error) {
                 return toolError(error.message);
             }
