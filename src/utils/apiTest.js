@@ -1,8 +1,11 @@
 // apiTest.js
 
 const fetchNutrition = async (ingredientName) => {
-    const appId = import.meta.env.VITE_EDAMAM_APP_ID;
-    const appKey = import.meta.env.VITE_EDAMAM_APP_KEY;
+    // The same food-database credentials IngredientSearch uses. This read
+    // VITE_EDAMAM_APP_ID/KEY, which were never set anywhere but CI, so the
+    // request went out unauthenticated and the Pantry's Info button did nothing.
+    const appId = import.meta.env.VITE_EDAMAM_FOOD_ID;
+    const appKey = import.meta.env.VITE_EDAMAM_FOOD_KEY;
 
     const url = `https://api.edamam.com/api/food-database/v2/parser?app_id=${appId}&app_key=${appKey}&ingr=${ingredientName}`;
 

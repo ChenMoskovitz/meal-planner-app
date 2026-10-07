@@ -18,6 +18,39 @@ const RECIPES = [
 const database = (extra = {}) =>
     fakeSupabase({ recipes: structuredClone(RECIPES), ingredients: [], recipe_ingredients: [], ...extra });
 
+/**
+ * A stand-in for the Edamam lookup. Always injected: left to the real one these
+ * tests would depend on credentials and a network, and would quietly make live
+ * API calls from CI.
+ */
+const lookupReturning = (nutrition) => {
+    const calls = [];
+    const lookup = async (name) => {
+        calls.push(name);
+        return nutrition;
+    };
+    lookup.calls = calls;
+    return lookup;
+};
+
+const FOUND = {
+    calories_per_unit: 40,
+    protein_per_unit: 1.1,
+    fat_per_unit: 0.1,
+    fiber_per_unit: 1.7,
+    found: true,
+    label: 'Onion'
+};
+
+const NOT_FOUND = {
+    calories_per_unit: 0,
+    protein_per_unit: 0,
+    fat_per_unit: 0,
+    fiber_per_unit: 0,
+    found: false,
+    reason: 'Edamam has no entry for "sumac"'
+};
+
 describe('findRecipe', () => {
     test('finds a recipe by its exact name', async () => {
         const result = await findRecipe(database(), 'Chicken soup');
@@ -110,6 +143,77 @@ describe('findOrCreateIngredient', () => {
     });
 });
 
+describe('nutrition on a new ingredient', () => {
+    test('stores the figures the lookup returned', async () => {
+        const db = database();
+
+        await findOrCreateIngredient(db, { name: 'Onion', lookup: lookupReturning(FOUND) });
+
+        const row = db.tables.ingredients[0];
+        assert.equal(row.calories_per_unit, 40);
+        assert.equal(row.protein_per_unit, 1.1);
+        assert.equal(row.fat_per_unit, 0.1);
+        assert.equal(row.fiber_per_unit, 1.7);
+    });
+
+    test('stores zeros when the lookup found nothing', async () => {
+        const db = database();
+
+        await findOrCreateIngredient(db, { name: 'sumac', lookup: lookupReturning(NOT_FOUND) });
+
+        assert.equal(db.tables.ingredients[0].calories_per_unit, 0);
+    });
+
+    test('still adds the ingredient when the lookup throws', async () => {
+        // A third-party outage must not stop the user adding an ingredient.
+        const db = database();
+        const exploding = async () => {
+            throw new Error('network down');
+        };
+
+        const { created } = await findOrCreateIngredient(db, { name: 'Onion', lookup: exploding });
+
+        assert.equal(created, true);
+        assert.equal(db.tables.ingredients[0].calories_per_unit, 0);
+    });
+
+    test('does not look anything up for an ingredient that already exists', async () => {
+        // Its figures are already stored, and re-fetching would spend quota on
+        // every single add.
+        const db = database({ ingredients: [{ id: 'onion', name: 'Onion', unit_type: 'g' }] });
+        const lookup = lookupReturning(FOUND);
+
+        await findOrCreateIngredient(db, { name: 'Onion', lookup });
+
+        assert.equal(lookup.calls.length, 0);
+    });
+
+    test('says the nutrition was stored', async () => {
+        const result = await addIngredient(database(), {
+            recipe: 'Chicken soup',
+            ingredient: 'Onion',
+            amount: 200,
+            lookup: lookupReturning(FOUND)
+        });
+
+        assert.match(result.message, /with its nutrition data/);
+    });
+
+    test('says why the nutrition is missing', async () => {
+        // Zeros make a recipe report no calories, which the user would otherwise
+        // only notice much later and have no way to explain.
+        const result = await addIngredient(database(), {
+            recipe: 'Chicken soup',
+            ingredient: 'sumac',
+            amount: 5,
+            lookup: lookupReturning(NOT_FOUND)
+        });
+
+        assert.match(result.message, /nutrition values are zero/);
+        assert.match(result.message, /no entry for "sumac"/);
+    });
+});
+
 describe('addIngredient', () => {
     test('adds an ingredient to a recipe and says so', async () => {
         const db = database();
@@ -117,7 +221,8 @@ describe('addIngredient', () => {
         const result = await addIngredient(db, {
             recipe: 'Chicken soup',
             ingredient: 'Onion',
-            amount: 200
+            amount: 200,
+            lookup: lookupReturning(FOUND)
         });
 
         assert.equal(result.ok, true);
@@ -133,7 +238,8 @@ describe('addIngredient', () => {
         const result = await addIngredient(db, {
             recipe: 'Chicken soup',
             ingredient: 'Onion',
-            amount: 200
+            amount: 200,
+            lookup: lookupReturning(FOUND)
         });
 
         assert.match(result.message, /was new, so it was added to the pantry/);
@@ -145,7 +251,8 @@ describe('addIngredient', () => {
         const result = await addIngredient(db, {
             recipe: 'Chicken soup',
             ingredient: 'Onion',
-            amount: 200
+            amount: 200,
+            lookup: lookupReturning(FOUND)
         });
 
         assert.doesNotMatch(result.message, /pantry/);
@@ -155,11 +262,13 @@ describe('addIngredient', () => {
         // The duplicate-row bug the shopping list had, in a different table.
         const db = database();
 
-        await addIngredient(db, { recipe: 'Chicken soup', ingredient: 'Onion', amount: 200 });
+        const lookup = lookupReturning(FOUND);
+        await addIngredient(db, { recipe: 'Chicken soup', ingredient: 'Onion', amount: 200, lookup });
         const second = await addIngredient(db, {
             recipe: 'Chicken soup',
             ingredient: 'Onion',
-            amount: 100
+            amount: 100,
+            lookup
         });
 
         assert.equal(db.tables.recipe_ingredients.length, 1);
@@ -170,8 +279,9 @@ describe('addIngredient', () => {
     test('keeps the same ingredient in two recipes separate', async () => {
         const db = database();
 
-        await addIngredient(db, { recipe: 'Chicken soup', ingredient: 'Onion', amount: 200 });
-        await addIngredient(db, { recipe: 'Israeli salad', ingredient: 'Onion', amount: 50 });
+        const lookup = lookupReturning(FOUND);
+        await addIngredient(db, { recipe: 'Chicken soup', ingredient: 'Onion', amount: 200, lookup });
+        await addIngredient(db, { recipe: 'Israeli salad', ingredient: 'Onion', amount: 50, lookup });
 
         assert.equal(db.tables.recipe_ingredients.length, 2);
         assert.equal(db.tables.ingredients.length, 1, 'the pantry should hold one onion');
@@ -183,7 +293,8 @@ describe('addIngredient', () => {
         const result = await addIngredient(db, {
             recipe: 'Beef wellington',
             ingredient: 'Onion',
-            amount: 200
+            amount: 200,
+            lookup: lookupReturning(FOUND)
         });
 
         assert.equal(result.ok, false);
@@ -197,7 +308,7 @@ describe('addIngredient', () => {
         const db = database({ error: { message: 'permission denied' } });
 
         await assert.rejects(
-            () => addIngredient(db, { recipe: 'Chicken soup', ingredient: 'Onion', amount: 200 }),
+            () => addIngredient(db, { recipe: 'Chicken soup', ingredient: 'Onion', amount: 200, lookup: lookupReturning(FOUND) }),
             /permission denied/
         );
     });
