@@ -68,9 +68,10 @@ export async function findOrCreateIngredient(client, { name, unit = 'g', lookup 
     // columns are what the whole nutrition feature reads, and an ingredient
     // stored with zeros makes every recipe containing it report no calories at
     // all — silently, because zero is a valid number.
-    const { found, reason, label, ...nutrition } = await lookup(name).catch(() => ({
+    const { found, reason, retriable, label, ...nutrition } = await lookup(name).catch(() => ({
         ...EMPTY_NUTRITION,
         found: false,
+        retriable: true,
         reason: 'the nutrition lookup failed'
     }));
 
@@ -81,7 +82,13 @@ export async function findOrCreateIngredient(client, { name, unit = 'g', lookup 
 
     if (insertError) throw new Error(`Could not add "${name}" to the pantry: ${insertError.message}`);
 
-    return { ingredient: inserted[0], created: true, nutritionFound: found, nutritionReason: reason };
+    return {
+        ingredient: inserted[0],
+        created: true,
+        nutritionFound: found,
+        nutritionReason: reason,
+        nutritionRetriable: retriable
+    };
 }
 
 /**
@@ -145,10 +152,8 @@ export async function addIngredient(
 
     if (!found.ok) return { ok: false, message: found.reason };
 
-    const { ingredient, created, nutritionFound, nutritionReason } = await findOrCreateIngredient(
-        client,
-        { name: ingredientName, unit, lookup }
-    );
+    const { ingredient, created, nutritionFound, nutritionReason, nutritionRetriable } =
+        await findOrCreateIngredient(client, { name: ingredientName, unit, lookup });
 
     const result = await addIngredientToRecipe(client, {
         recipeId: found.recipe.id,
@@ -161,10 +166,14 @@ export async function addIngredient(
     // A new pantry ingredient is a side effect the user did not ask for, and a
     // missing nutrition figure is worth saying out loud rather than leaving them
     // to wonder later why a recipe reports no calories.
+    // A transient failure and a genuinely unknown food both leave zeros behind,
+    // but only one of them can be repaired — so they must not read the same.
     const note = created
         ? nutritionFound
             ? ` "${ingredient.name}" was new, so it was added to the pantry with its nutrition data.`
-            : ` "${ingredient.name}" was new, so it was added to the pantry — but ${nutritionReason}, so its nutrition values are zero.`
+            : nutritionRetriable
+                ? ` "${ingredient.name}" was new, but its nutrition could not be looked up right now (${nutritionReason}), so its values are zero for the moment. Running "npm run backfill" in the mcp folder will fill them in.`
+                : ` "${ingredient.name}" was new, so it was added to the pantry — but ${nutritionReason}, so its nutrition values are zero.`
         : '';
 
     const message = result.increased

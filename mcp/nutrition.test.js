@@ -11,22 +11,44 @@ import { lookupNutrition, EMPTY_NUTRITION } from './nutrition.js';
 
 const ENV = { VITE_EDAMAM_FOOD_ID: 'id', VITE_EDAMAM_FOOD_KEY: 'key' };
 
-/** A fetch that answers with one canned response. */
-const fetchReturning = (body, { ok = true, status = 200 } = {}) => {
+/** A fetch that answers with one canned response, every time. */
+const fetchReturning = (body, { ok = true, status = 200 } = {}) =>
+    fetchSequence([{ body, ok, status }], { repeatLast: true });
+
+/**
+ * A fetch that walks a list of responses, one per call.
+ *
+ * Needed to test retries: "fails once then succeeds" cannot be expressed with a
+ * single canned answer. An entry of the form {throws: '...'} rejects instead.
+ */
+const fetchSequence = (responses, { repeatLast = false } = {}) => {
     const calls = [];
     const impl = async (url) => {
+        const spec = responses[calls.length] ?? (repeatLast ? responses.at(-1) : undefined);
         calls.push(url);
+
+        if (!spec) throw new Error('fetchSequence ran out of responses');
+        if (spec.throws) throw new Error(spec.throws);
+
         return {
-            ok,
-            status,
+            ok: spec.ok ?? true,
+            status: spec.status ?? 200,
             json: async () => {
-                if (body === 'not json') throw new SyntaxError('Unexpected token');
-                return body;
+                if (spec.body === 'not json') throw new SyntaxError('Unexpected token');
+                return spec.body;
             }
         };
     };
     impl.calls = calls;
     return impl;
+};
+
+/** Records how long the code asked to wait, without actually waiting. */
+const recordingSleep = () => {
+    const waits = [];
+    const sleep = async (ms) => { waits.push(ms); };
+    sleep.waits = waits;
+    return sleep;
 };
 
 const ONION = {
@@ -103,7 +125,8 @@ describe('lookupNutrition', () => {
     test('returns zeros when the credentials are rejected', async () => {
         const result = await lookupNutrition('onion', {
             fetchImpl: fetchReturning({}, { ok: false, status: 401 }),
-            env: ENV
+            env: ENV,
+            sleep: recordingSleep()
         });
 
         assert.equal(result.found, false);
@@ -115,7 +138,7 @@ describe('lookupNutrition', () => {
             throw new Error('getaddrinfo ENOTFOUND');
         };
 
-        const result = await lookupNutrition('onion', { fetchImpl: failing, env: ENV });
+        const result = await lookupNutrition('onion', { fetchImpl: failing, env: ENV, sleep: recordingSleep() });
 
         assert.equal(result.found, false);
         assert.match(result.reason, /could not reach Edamam/);
@@ -124,7 +147,8 @@ describe('lookupNutrition', () => {
     test('returns zeros when the body is not JSON', async () => {
         const result = await lookupNutrition('onion', {
             fetchImpl: fetchReturning('not json'),
-            env: ENV
+            env: ENV,
+            sleep: recordingSleep()
         });
 
         assert.equal(result.found, false);
@@ -140,6 +164,91 @@ describe('lookupNutrition', () => {
         assert.equal(result.found, false);
         assert.match(result.reason, /no Edamam credentials/);
         assert.equal(fetchImpl.calls.length, 0, 'no request should be made');
+    });
+
+    test('retries a 429 and uses the answer when it succeeds', async () => {
+        // The bug this fixes: a rate-limited lookup stored zeros, so half a
+        // recipe silently reported no calories.
+        const fetchImpl = fetchSequence([
+            { ok: false, status: 429 },
+            { body: ONION }
+        ]);
+        const sleep = recordingSleep();
+
+        const result = await lookupNutrition('onion', { fetchImpl, env: ENV, sleep });
+
+        assert.equal(result.found, true);
+        assert.equal(result.calories_per_unit, 40);
+        assert.equal(fetchImpl.calls.length, 2);
+        assert.deepEqual(sleep.waits, [2000], 'should have waited once before retrying');
+    });
+
+    test('gives up after the allowed number of attempts', async () => {
+        const fetchImpl = fetchSequence([{ ok: false, status: 429 }], { repeatLast: true });
+        const sleep = recordingSleep();
+
+        const result = await lookupNutrition('onion', {
+            fetchImpl, env: ENV, sleep, attempts: 3, backoffMs: 1000
+        });
+
+        assert.equal(result.found, false);
+        assert.equal(fetchImpl.calls.length, 3);
+        // Doubling each time, and no wait after the final attempt.
+        assert.deepEqual(sleep.waits, [1000, 2000]);
+    });
+
+    test('marks a rate-limited failure as retriable', async () => {
+        // This is what lets the tool say "run the backfill" instead of
+        // "Edamam does not know this ingredient".
+        const result = await lookupNutrition('onion', {
+            fetchImpl: fetchReturning({}, { ok: false, status: 429 }),
+            env: ENV,
+            sleep: recordingSleep()
+        });
+
+        assert.equal(result.retriable, true);
+        assert.match(result.reason, /rate-limiting/);
+    });
+
+    test('does not retry a food Edamam has answered about', async () => {
+        // An empty result is an answer, not a failure; asking again wastes a
+        // request from a very small budget.
+        const fetchImpl = fetchSequence([{ body: { hints: [] } }], { repeatLast: true });
+
+        const result = await lookupNutrition('zbgqx', {
+            fetchImpl, env: ENV, sleep: recordingSleep()
+        });
+
+        assert.equal(result.found, false);
+        assert.equal(result.retriable, false, 'a backfill would not help');
+        assert.equal(fetchImpl.calls.length, 1, 'should not have retried');
+    });
+
+    test('retries a 5xx but not a 4xx that is not a rate limit', async () => {
+        const server = fetchSequence([{ ok: false, status: 503 }, { body: ONION }]);
+        const found = await lookupNutrition('onion', {
+            fetchImpl: server, env: ENV, sleep: recordingSleep()
+        });
+        assert.equal(found.found, true, '503 should be retried');
+
+        const rejected = fetchSequence([{ ok: false, status: 401 }], { repeatLast: true });
+        const result = await lookupNutrition('onion', {
+            fetchImpl: rejected, env: ENV, sleep: recordingSleep()
+        });
+
+        assert.equal(result.retriable, false, 'bad credentials will not fix themselves');
+        assert.equal(rejected.calls.length, 1);
+    });
+
+    test('retries a dropped connection', async () => {
+        const fetchImpl = fetchSequence([{ throws: 'ECONNRESET' }, { body: ONION }]);
+
+        const result = await lookupNutrition('onion', {
+            fetchImpl, env: ENV, sleep: recordingSleep()
+        });
+
+        assert.equal(result.found, true);
+        assert.equal(fetchImpl.calls.length, 2);
     });
 
     test('EMPTY_NUTRITION covers exactly the four stored columns', async () => {
