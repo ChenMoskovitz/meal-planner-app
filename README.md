@@ -2,7 +2,7 @@
 
 A weekly dinner planner that turns a plan into a shopping list. Pick recipes for each day, set nutrition goals, and get the aggregated ingredient list for the week — scaled to how many people you're cooking for.
 
-**[Live app](https://meal-planner-app-ruby-ten.vercel.app)** · React + Supabase · 145 automated tests
+**[Live app](https://meal-planner-app-ruby-ten.vercel.app)** · React + Supabase · 164 automated tests
 
 ![The weekly plan: seven day cards with their meals, a leftovers badge, and the shopping manager below](docs/screenshot.png)
 
@@ -34,7 +34,7 @@ Three suites, each covering what the others can't, all gating every pull request
 |---|---|---|---|
 | Unit | 41 | Vitest | Shopping-list and nutrition arithmetic, week-date handling. Pure functions, extracted from components specifically so they could be tested without a database |
 | End-to-end | 33 | Playwright (Python) | The real app against real Supabase — signing in, creating recipes, planning a week, building the list |
-| Protocol | 71 | `node:test` | The MCP server, driven over JSON-RPC as a client would |
+| Protocol | 90 | `node:test` | The MCP server, driven over JSON-RPC as a client would |
 
 Two deliberate choices in there:
 
@@ -76,7 +76,7 @@ pytest tests/ -v
 
 `mcp/` is a [Model Context Protocol](https://modelcontextprotocol.io) server — a separate Node package that exposes the planner to an AI assistant. Its own dependency tree, its own CI job.
 
-Tools so far: `ping`, `list_recipes` (with an optional dish-type filter), and `add_ingredient`, which adds an ingredient to a recipe — creating it in the pantry first if it is new, looking its nutrition up in Edamam, and adding to the existing amount rather than listing it twice if the recipe already has it.
+Tools so far: `ping`, `list_recipes` (with an optional dish-type filter), `repair_nutrition`, and `add_ingredient`, which adds an ingredient to a recipe — creating it in the pantry first if it is new, looking its nutrition up in Edamam, and adding to the existing amount rather than listing it twice if the recipe already has it.
 
 It signs in with a dedicated Supabase account using email and password, not a service-role key, so row-level security keeps applying and the server has exactly the access that one user has. Sign-in is deferred to the first tool call, so a credentials problem surfaces as a readable tool error instead of a server that dies before the client can ask why.
 
@@ -92,7 +92,9 @@ Edamam's free tier allows only a handful of requests before returning 429, with
 no `Retry-After` header, so adding a dozen ingredients in one conversation will
 rate-limit part way through. The tool retries briefly and then says plainly that
 a value is missing *and repairable*, rather than reporting it as a food Edamam
-has never heard of — `npm run backfill` retries those more patiently.
+has never heard of — `npm run backfill` retries those more patiently, and the `repair_nutrition`
+tool does the same from inside a conversation, a few ingredients per call so the
+reply comes back quickly.
 
 Add `MEAL_PLANNER_EMAIL` and `MEAL_PLANNER_PASSWORD` to the project's `.env` first. Use a different account from `TEST_USER_*` — the E2E suite wipes that one.
 

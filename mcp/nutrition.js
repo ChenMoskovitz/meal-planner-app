@@ -119,6 +119,7 @@ export async function lookupNutrition(
             ...EMPTY_NUTRITION,
             found: false,
             retriable: false,
+            kind: 'misconfigured',
             reason: 'no Edamam credentials are configured'
         };
     }
@@ -128,7 +129,9 @@ export async function lookupNutrition(
     for (let tryNumber = 1; tryNumber <= attempts; tryNumber++) {
         last = await attempt(name, { fetchImpl, appId, appKey });
 
-        if (last.ok) return { ...last.nutrition, found: true, retriable: false, label: last.label };
+        if (last.ok) {
+            return { ...last.nutrition, found: true, retriable: false, kind: 'found', label: last.label };
+        }
 
         // A permanent answer will not change by asking again.
         if (!last.transient) break;
@@ -140,6 +143,9 @@ export async function lookupNutrition(
         ...EMPTY_NUTRITION,
         found: false,
         retriable: last.transient === true,
+        // 'absent' is Edamam answering about the food; 'unavailable' is never
+        // having got an answer. Only the second is worth asking again.
+        kind: last.transient ? 'unavailable' : 'absent',
         reason: last.reason
     };
 }

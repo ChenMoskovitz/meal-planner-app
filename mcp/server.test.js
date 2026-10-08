@@ -26,6 +26,15 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createServer } from './create-server.js';
 import { fakeSupabase } from './fake-supabase.js';
 
+const EMPTY_INGREDIENT = (name) => ({
+    id: name,
+    name,
+    calories_per_unit: 0,
+    protein_per_unit: 0,
+    fat_per_unit: 0,
+    fiber_per_unit: 0
+});
+
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 const RECIPES = [
@@ -34,8 +43,8 @@ const RECIPES = [
 ];
 
 /** Connects a client to an in-process server backed by `client` as its database. */
-async function connectWithDatabase(database) {
-    const server = createServer({ getClient: async () => database });
+async function connectWithDatabase(database, lookup) {
+    const server = createServer({ getClient: async () => database, lookup });
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
 
     const mcp = new Client({ name: 'server.test.js', version: '1.0.0' });
@@ -72,7 +81,7 @@ describe('the real executable', () => {
         const { tools } = await mcp.listTools();
         const names = tools.map(tool => tool.name).sort();
 
-        assert.deepEqual(names, ['add_ingredient', 'list_recipes', 'ping']);
+        assert.deepEqual(names, ['add_ingredient', 'list_recipes', 'ping', 'repair_nutrition']);
     });
 
     test('describes every tool well enough for a model to choose it', async () => {
@@ -108,7 +117,12 @@ describe('the real executable', () => {
     // tool that writes must not be able to arrive claiming to be a lookup. The
     // list is spelled out rather than derived, so adding a tool fails here until
     // someone states which kind it is.
-    const READ_ONLY = { ping: true, list_recipes: true, add_ingredient: false };
+    const READ_ONLY = {
+        ping: true,
+        list_recipes: true,
+        add_ingredient: false,
+        repair_nutrition: false
+    };
 
     test('declares which tools write', async () => {
         const { tools } = await mcp.listTools();
@@ -309,6 +323,47 @@ describe('with a fake database', () => {
 
         assert.equal(result.isError, true);
         assert.match(result.content[0].text, /list_recipes/);
+        await mcp.close();
+    });
+
+    test('repair_nutrition takes no arguments', async () => {
+        const mcp = await connectWithDatabase(fakeSupabase({}));
+
+        const { tools } = await mcp.listTools();
+        const repair = tools.find(tool => tool.name === 'repair_nutrition');
+
+        // Nothing to get wrong means the model can always call it correctly.
+        assert.deepEqual(repair.inputSchema.properties ?? {}, {});
+        await mcp.close();
+    });
+
+    test('repair_nutrition says so when there is nothing to do', async () => {
+        const mcp = await connectWithDatabase(fakeSupabase({ ingredients: [] }));
+
+        const result = await mcp.callTool({ name: 'repair_nutrition', arguments: {} });
+
+        assert.notEqual(result.isError, true);
+        assert.match(result.content[0].text, /already has nutrition/);
+        await mcp.close();
+    });
+
+    test('repair_nutrition stops at a batch and asks to be called again', async () => {
+        // Eight empty ingredients, a batch of five: the reply has to say three
+        // are left, or the model has no reason to call it a second time.
+        const database = fakeSupabase({
+            ingredients: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map(EMPTY_INGREDIENT)
+        });
+        const found = async (name) => ({
+            calories_per_unit: 40, protein_per_unit: 1.1, fat_per_unit: 0.1, fiber_per_unit: 1.7,
+            found: true, retriable: false, kind: 'found', label: name
+        });
+        const mcp = await connectWithDatabase(database, found);
+
+        const result = await mcp.callTool({ name: 'repair_nutrition', arguments: {} });
+
+        assert.notEqual(result.isError, true);
+        assert.match(result.content[0].text, /3 still without nutrition/);
+        assert.match(result.content[0].text, /call repair_nutrition again/);
         await mcp.close();
     });
 
