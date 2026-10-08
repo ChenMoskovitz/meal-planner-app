@@ -10,12 +10,15 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { listRecipes, formatRecipeList, RECIPE_TYPES } from './recipes.js';
 import { addIngredient, UNITS } from './ingredients.js';
+import { repairNutrition, describeOutcome } from './repair.js';
 
 /**
  * A tool failure has to come back as a result with isError, not a thrown
  * exception: the model can read a result and tell the user what went wrong,
  * whereas a throw becomes a protocol-level error it cannot explain.
  */
+const REPAIR_BATCH = 5;
+
 function toolError(message) {
     return { isError: true, content: [{ type: 'text', text: message }] };
 }
@@ -52,8 +55,8 @@ function createWriteQueue() {
  *   invocation rather than at startup so a credentials problem surfaces as a
  *   readable tool error instead of preventing the server from starting at all.
  */
-export function createServer({ getClient }) {
-    const server = new McpServer({ name: 'meal-planner', version: '0.3.0' });
+export function createServer({ getClient, lookup }) {
+    const server = new McpServer({ name: 'meal-planner', version: '0.4.0' });
     const serialize = createWriteQueue();
 
     server.registerTool(
@@ -148,7 +151,9 @@ export function createServer({ getClient }) {
         async ({ recipe, ingredient, amount, unit }) => {
             try {
                 const result = await serialize(async () =>
-                    addIngredient(await getClient(), { recipe, ingredient, amount, unit })
+                    addIngredient(await getClient(), {
+                        recipe, ingredient, amount, unit, ...(lookup ? { lookup } : {})
+                    })
                 );
 
                 // A recipe that does not exist is the user's problem to fix, not a
@@ -156,6 +161,61 @@ export function createServer({ getClient }) {
                 return result.ok
                     ? { content: [{ type: 'text', text: result.message }] }
                     : toolError(result.message);
+            } catch (error) {
+                return toolError(error.message);
+            }
+        }
+    );
+
+    server.registerTool(
+        'repair_nutrition',
+        {
+            title: 'Fill in missing ingredient nutrition',
+            description:
+                "Fill in nutrition data for pantry ingredients that have none. Ingredients added while the food database was rate-limiting are stored with zeros, which makes any recipe containing them report no calories; this looks them up again and saves the values. Works through a few ingredients per call and reports how many are left, so call it again while any remain. Use it when adding ingredients reported that a lookup could not be completed.",
+            inputSchema: {},
+            // Writes, but only ever fills in blanks — it never changes a value
+            // that is already set, and running it twice is harmless.
+            annotations: {
+                readOnlyHint: false,
+                destructiveHint: false,
+                idempotentHint: true,
+                openWorldHint: true
+            }
+        },
+        async () => {
+            try {
+                const summary = await serialize(async () =>
+                    repairNutrition(await getClient(), {
+                        // Injected only by tests; the default is the real one.
+                        ...(lookup ? { lookup } : {}),
+                        // Bounded so the call returns in seconds. The reply says
+                        // how many are left, which is what prompts another call.
+                        limit: REPAIR_BATCH,
+                        // Less patient than the CLI: someone is waiting here.
+                        attempts: 3,
+                        backoffMs: 1500,
+                        gapMs: 500
+                    })
+                );
+
+                if (summary.total === 0) {
+                    return { content: [{ type: 'text', text: 'Every ingredient already has nutrition data.' }] };
+                }
+
+                const lines = summary.results.map(describeOutcome);
+                const left = summary.remaining > 0
+                    ? `\n\n${summary.remaining} still without nutrition — call repair_nutrition again to continue.`
+                    : '\n\nEvery ingredient now has nutrition data.';
+
+                return {
+                    content: [
+                        {
+                            type: 'text',
+                            text: `Repaired ${summary.filled} of ${summary.total}:\n${lines.join('\n')}${left}`
+                        }
+                    ]
+                };
             } catch (error) {
                 return toolError(error.message);
             }
