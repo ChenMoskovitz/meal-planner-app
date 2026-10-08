@@ -2,7 +2,7 @@
 
 A weekly dinner planner that turns a plan into a shopping list. Pick recipes for each day, set nutrition goals, and get the aggregated ingredient list for the week — scaled to how many people you're cooking for.
 
-**[Live app](https://meal-planner-app-ruby-ten.vercel.app)** · React + Supabase · 137 automated tests
+**[Live app](https://meal-planner-app-ruby-ten.vercel.app)** · React + Supabase · 145 automated tests
 
 ![The weekly plan: seven day cards with their meals, a leftovers badge, and the shopping manager below](docs/screenshot.png)
 
@@ -34,7 +34,7 @@ Three suites, each covering what the others can't, all gating every pull request
 |---|---|---|---|
 | Unit | 41 | Vitest | Shopping-list and nutrition arithmetic, week-date handling. Pure functions, extracted from components specifically so they could be tested without a database |
 | End-to-end | 33 | Playwright (Python) | The real app against real Supabase — signing in, creating recipes, planning a week, building the list |
-| Protocol | 63 | `node:test` | The MCP server, driven over JSON-RPC as a client would |
+| Protocol | 71 | `node:test` | The MCP server, driven over JSON-RPC as a client would |
 
 Two deliberate choices in there:
 
@@ -83,9 +83,16 @@ It signs in with a dedicated Supabase account using email and password, not a se
 ```bash
 cd mcp
 npm install
-npm run check     # verifies credentials and prints your recipes
+npm run check      # verifies credentials and prints your recipes
+npm run backfill   # fills in nutrition for any ingredient that has none
 npm test
 ```
+
+Edamam's free tier allows only a handful of requests before returning 429, with
+no `Retry-After` header, so adding a dozen ingredients in one conversation will
+rate-limit part way through. The tool retries briefly and then says plainly that
+a value is missing *and repairable*, rather than reporting it as a food Edamam
+has never heard of — `npm run backfill` retries those more patiently.
 
 Add `MEAL_PLANNER_EMAIL` and `MEAL_PLANNER_PASSWORD` to the project's `.env` first. Use a different account from `TEST_USER_*` — the E2E suite wipes that one.
 

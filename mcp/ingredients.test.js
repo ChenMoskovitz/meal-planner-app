@@ -48,7 +48,18 @@ const NOT_FOUND = {
     fat_per_unit: 0,
     fiber_per_unit: 0,
     found: false,
+    retriable: false,
     reason: 'Edamam has no entry for "sumac"'
+};
+
+const RATE_LIMITED = {
+    calories_per_unit: 0,
+    protein_per_unit: 0,
+    fat_per_unit: 0,
+    fiber_per_unit: 0,
+    found: false,
+    retriable: true,
+    reason: 'Edamam was rate-limiting the request'
 };
 
 describe('findRecipe', () => {
@@ -197,6 +208,32 @@ describe('nutrition on a new ingredient', () => {
         });
 
         assert.match(result.message, /with its nutrition data/);
+    });
+
+    test('points at the backfill when the lookup was only rate-limited', async () => {
+        // The distinction that matters: this ingredient's values can be filled
+        // in later, unlike one Edamam has never heard of.
+        const result = await addIngredient(database(), {
+            recipe: 'Chicken soup',
+            ingredient: 'kidney beans',
+            amount: 330,
+            lookup: lookupReturning(RATE_LIMITED)
+        });
+
+        assert.match(result.message, /could not be looked up right now/);
+        assert.match(result.message, /backfill/);
+        assert.doesNotMatch(result.message, /no entry/);
+    });
+
+    test('does not promise a backfill for a food Edamam does not know', async () => {
+        const result = await addIngredient(database(), {
+            recipe: 'Chicken soup',
+            ingredient: 'sumac',
+            amount: 5,
+            lookup: lookupReturning(NOT_FOUND)
+        });
+
+        assert.doesNotMatch(result.message, /backfill/);
     });
 
     test('says why the nutrition is missing', async () => {
