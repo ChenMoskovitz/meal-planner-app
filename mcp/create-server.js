@@ -8,7 +8,7 @@
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { listRecipes, formatRecipeList, RECIPE_TYPES } from './recipes.js';
+import { listRecipes, formatRecipeList, createRecipe, RECIPE_TYPES } from './recipes.js';
 import { addIngredient, UNITS } from './ingredients.js';
 import { repairNutrition, describeOutcome } from './repair.js';
 
@@ -56,7 +56,7 @@ function createWriteQueue() {
  *   readable tool error instead of preventing the server from starting at all.
  */
 export function createServer({ getClient, lookup }) {
-    const server = new McpServer({ name: 'meal-planner', version: '0.4.0' });
+    const server = new McpServer({ name: 'meal-planner', version: '0.5.0' });
     const serialize = createWriteQueue();
 
     server.registerTool(
@@ -107,6 +107,59 @@ export function createServer({ getClient, lookup }) {
                 const recipes = await listRecipes(client, { type });
 
                 return { content: [{ type: 'text', text: formatRecipeList(recipes, { type }) }] };
+            } catch (error) {
+                return toolError(error.message);
+            }
+        }
+    );
+
+    server.registerTool(
+        'add_recipe',
+        {
+            title: 'Add a recipe',
+            description:
+                "Create a new recipe in the user's meal planner, so add_ingredient has something to add ingredients to. Use list_recipes first to check it does not already exist — creating one with the same name fails rather than making a duplicate. Type and servings can be left out and set later.",
+            inputSchema: {
+                name: z.string().min(1).describe('The recipe name, for example "Chicken soup".'),
+                type: z
+                    .enum(RECIPE_TYPES)
+                    .optional()
+                    .describe('What kind of dish this is. Omit to leave it untyped.'),
+                base_servings: z
+                    .number()
+                    .int()
+                    .positive()
+                    .optional()
+                    .describe('How many servings this recipe makes. Omit to leave it unset.')
+            },
+            // Writes, like add_ingredient, so a client asks before running it.
+            annotations: {
+                readOnlyHint: false,
+                destructiveHint: false,
+                idempotentHint: false,
+                openWorldHint: false
+            }
+        },
+        async ({ name, type, base_servings }) => {
+            try {
+                const result = await serialize(async () =>
+                    createRecipe(await getClient(), { name, type, baseServings: base_servings })
+                );
+
+                if (!result.ok) return toolError(result.reason);
+
+                const { recipe } = result;
+                const kind = recipe.type ? `, a ${recipe.type.replace(/_/g, ' ')}` : '';
+                const servings = recipe.base_servings ? `, serving ${recipe.base_servings}` : '';
+
+                return {
+                    content: [
+                        {
+                            type: 'text',
+                            text: `Created "${recipe.name}"${kind}${servings}. Use add_ingredient to add ingredients to it.`
+                        }
+                    ]
+                };
             } catch (error) {
                 return toolError(error.message);
             }

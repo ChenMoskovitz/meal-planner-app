@@ -81,7 +81,7 @@ describe('the real executable', () => {
         const { tools } = await mcp.listTools();
         const names = tools.map(tool => tool.name).sort();
 
-        assert.deepEqual(names, ['add_ingredient', 'list_recipes', 'ping', 'repair_nutrition']);
+        assert.deepEqual(names, ['add_ingredient', 'add_recipe', 'list_recipes', 'ping', 'repair_nutrition']);
     });
 
     test('describes every tool well enough for a model to choose it', async () => {
@@ -120,6 +120,7 @@ describe('the real executable', () => {
     const READ_ONLY = {
         ping: true,
         list_recipes: true,
+        add_recipe: false,
         add_ingredient: false,
         repair_nutrition: false
     };
@@ -238,6 +239,71 @@ describe('with a fake database', () => {
 
         assert.notEqual(result.isError, true);
         assert.match(result.content[0].text, /No recipes found/);
+        await mcp.close();
+    });
+
+    test('creates a recipe', async () => {
+        const database = fakeSupabase({ recipes: [] });
+        const mcp = await connectWithDatabase(database);
+
+        const result = await mcp.callTool({
+            name: 'add_recipe',
+            arguments: { name: 'Lentil stew', type: 'main_dish', base_servings: 4 }
+        });
+
+        assert.notEqual(result.isError, true);
+        assert.match(result.content[0].text, /Created "Lentil stew"/);
+        assert.equal(database.tables.recipes.length, 1);
+        await mcp.close();
+    });
+
+    test('does not create a recipe that already exists', async () => {
+        const database = fakeSupabase({ recipes: [{ id: 'r1', name: 'Lentil stew' }] });
+        const mcp = await connectWithDatabase(database);
+
+        const result = await mcp.callTool({
+            name: 'add_recipe',
+            arguments: { name: 'Lentil stew' }
+        });
+
+        assert.equal(result.isError, true);
+        assert.match(result.content[0].text, /already exists/);
+        assert.equal(database.tables.recipes.length, 1);
+        await mcp.close();
+    });
+
+    test('does not create the recipe twice when two calls race', async () => {
+        const database = fakeSupabase({ recipes: [] });
+        const mcp = await connectWithDatabase(database);
+
+        const results = await Promise.all([
+            mcp.callTool({ name: 'add_recipe', arguments: { name: 'Lentil stew' } }),
+            mcp.callTool({ name: 'add_recipe', arguments: { name: 'lentil stew' } })
+        ]);
+
+        assert.equal(database.tables.recipes.length, 1);
+        assert.equal(results.filter(r => r.isError).length, 1);
+        await mcp.close();
+    });
+
+    test('rejects an empty recipe name before it reaches the database', async () => {
+        const mcp = await connectWithDatabase(fakeSupabase({ recipes: [] }));
+
+        const result = await mcp.callTool({ name: 'add_recipe', arguments: { name: '' } });
+
+        assert.equal(result.isError, true);
+        await mcp.close();
+    });
+
+    test('rejects a recipe type the column cannot hold', async () => {
+        const mcp = await connectWithDatabase(fakeSupabase({ recipes: [] }));
+
+        const result = await mcp.callTool({
+            name: 'add_recipe',
+            arguments: { name: 'Lentil stew', type: 'dessert' }
+        });
+
+        assert.equal(result.isError, true);
         await mcp.close();
     });
 
