@@ -168,10 +168,22 @@ function MealPlan() {
                 if (dayData.side) rowsToInsert.push({ day_of_week: day, recipe_id: dayData.side.id, slot_type: 'side', planned_servings: globalPlannedServings });
                 if (dayData.veg) rowsToInsert.push({ day_of_week: day, recipe_id: dayData.veg.id, slot_type: 'veg', planned_servings: globalPlannedServings });
             }
-            await supabase.from('plan_recipes').delete().in('day_of_week', weekDates);
-            await supabase.from('plan_recipes').insert(rowsToInsert);
+            // Supabase reports a failed delete/insert on `error`, not by throwing —
+            // leaving it unchecked let a rejected write still fall through to
+            // showSuccess below, so the plan looked saved when it was not.
+            const { error: deleteError } = await supabase.from('plan_recipes').delete().in('day_of_week', weekDates);
+            if (deleteError) throw deleteError;
+
+            if (rowsToInsert.length > 0) {
+                const { error: insertError } = await supabase.from('plan_recipes').insert(rowsToInsert);
+                if (insertError) throw insertError;
+            }
+
             showSuccess("Weekly plan saved.");
-        } catch (error) { showError("Failed to save: " + error.message); }
+        } catch (error) {
+            console.error('Failed to save the weekly plan:', error);
+            showError("Failed to save: " + error.message);
+        }
     }
 
     // --- SHOPPING LIST LOGIC ---
