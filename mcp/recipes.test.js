@@ -8,7 +8,7 @@
  */
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { listRecipes, formatRecipeList, RECIPE_TYPES } from './recipes.js';
+import { listRecipes, formatRecipeList, createRecipe, RECIPE_TYPES } from './recipes.js';
 import { fakeSupabase } from './fake-supabase.js';
 
 const RECIPES = [
@@ -101,6 +101,74 @@ describe('formatRecipeList', () => {
 
     test('has a plain empty message when nothing was filtered', () => {
         assert.equal(formatRecipeList([]), 'No recipes found.');
+    });
+});
+
+describe('createRecipe', () => {
+    test('creates a recipe with the given name', async () => {
+        const client = fakeSupabase({ recipes: [] });
+
+        const result = await createRecipe(client, { name: 'Lentil stew' });
+
+        assert.equal(result.ok, true);
+        assert.equal(result.recipe.name, 'Lentil stew');
+        assert.equal(client.tables.recipes.length, 1);
+    });
+
+    test('trims the name before saving it', async () => {
+        const client = fakeSupabase({ recipes: [] });
+
+        const result = await createRecipe(client, { name: '  Lentil stew  ' });
+
+        assert.equal(result.recipe.name, 'Lentil stew');
+    });
+
+    test('rejects a name that is only whitespace', async () => {
+        const client = fakeSupabase({ recipes: [] });
+
+        const result = await createRecipe(client, { name: '   ' });
+
+        assert.equal(result.ok, false);
+        assert.match(result.reason, /needs a name/);
+        assert.equal(client.tables.recipes.length, 0);
+    });
+
+    test('leaves type and base_servings unset when not given', async () => {
+        const client = fakeSupabase({ recipes: [] });
+
+        const result = await createRecipe(client, { name: 'Lentil stew' });
+
+        assert.equal(result.recipe.type, null);
+        assert.equal(result.recipe.base_servings, null);
+    });
+
+    test('saves the type and base_servings when given', async () => {
+        const client = fakeSupabase({ recipes: [] });
+
+        const result = await createRecipe(client, {
+            name: 'Lentil stew',
+            type: 'main_dish',
+            baseServings: 4
+        });
+
+        assert.equal(result.recipe.type, 'main_dish');
+        assert.equal(result.recipe.base_servings, 4);
+    });
+
+    test('refuses to create a recipe that already exists, case-insensitively', async () => {
+        const client = fakeSupabase({ recipes: [{ id: 'r1', name: 'Lentil Stew' }] });
+
+        const result = await createRecipe(client, { name: 'lentil stew' });
+
+        assert.equal(result.ok, false);
+        assert.match(result.reason, /already exists/);
+        assert.equal(client.tables.recipes.length, 1);
+    });
+
+    test('throws when the existence check fails', async () => {
+        const client = fakeSupabase({ error: { message: 'JWT expired' } });
+
+        await assert.rejects(() => createRecipe(client, { name: 'Lentil stew' }), /JWT expired/);
     });
 });
 
