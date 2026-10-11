@@ -33,12 +33,17 @@ const lookupReturning = (nutrition) => {
     return lookup;
 };
 
+// Shaped exactly like lookupNutrition's real return value (including `kind`,
+// which earlier fixtures here omitted — the gap that let the `kind` column
+// bug reach production without a failing test).
 const FOUND = {
     calories_per_unit: 40,
     protein_per_unit: 1.1,
     fat_per_unit: 0.1,
     fiber_per_unit: 1.7,
     found: true,
+    retriable: false,
+    kind: 'found',
     label: 'Onion'
 };
 
@@ -49,6 +54,7 @@ const NOT_FOUND = {
     fiber_per_unit: 0,
     found: false,
     retriable: false,
+    kind: 'absent',
     reason: 'Edamam has no entry for "sumac"'
 };
 
@@ -59,6 +65,7 @@ const RATE_LIMITED = {
     fiber_per_unit: 0,
     found: false,
     retriable: true,
+    kind: 'unavailable',
     reason: 'Edamam was rate-limiting the request'
 };
 
@@ -165,6 +172,22 @@ describe('nutrition on a new ingredient', () => {
         assert.equal(row.protein_per_unit, 1.1);
         assert.equal(row.fat_per_unit, 0.1);
         assert.equal(row.fiber_per_unit, 1.7);
+    });
+
+    test('inserts only the columns the ingredients table has', async () => {
+        // lookupNutrition's result carries metadata (found, retriable, kind,
+        // label) alongside the four real columns. Spreading the "rest" of that
+        // object into the insert once let `kind` leak through and get rejected
+        // by Supabase as a column that does not exist — this pins the insert to
+        // exactly the pantry's columns.
+        const db = database();
+
+        await findOrCreateIngredient(db, { name: 'Onion', lookup: lookupReturning(FOUND) });
+
+        assert.deepEqual(
+            Object.keys(db.tables.ingredients[0]).sort(),
+            ['calories_per_unit', 'fat_per_unit', 'fiber_per_unit', 'id', 'name', 'protein_per_unit', 'stock_quantity', 'unit_type']
+        );
     });
 
     test('stores zeros when the lookup found nothing', async () => {

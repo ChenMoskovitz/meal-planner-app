@@ -68,16 +68,27 @@ export async function findOrCreateIngredient(client, { name, unit = 'g', lookup 
     // columns are what the whole nutrition feature reads, and an ingredient
     // stored with zeros makes every recipe containing it report no calories at
     // all — silently, because zero is a valid number.
-    const { found, reason, retriable, label, ...nutrition } = await lookup(name).catch(() => ({
-        ...EMPTY_NUTRITION,
-        found: false,
-        retriable: true,
-        reason: 'the nutrition lookup failed'
-    }));
+    //
+    // The four columns are picked out by name rather than spread with the
+    // metadata fields destructured away: lookupNutrition's result has grown a
+    // field (`kind`) since this was written, and the old `...nutrition` spread
+    // silently carried it into this insert, which has no `kind` column — the
+    // bug this change fixes. Naming the columns means a future field added
+    // there cannot leak into this insert the same way.
+    const { found, reason, retriable, calories_per_unit, protein_per_unit, fat_per_unit, fiber_per_unit } =
+        await lookup(name).catch(() => ({
+            ...EMPTY_NUTRITION,
+            found: false,
+            retriable: true,
+            reason: 'the nutrition lookup failed'
+        }));
 
     const { data: inserted, error: insertError } = await client
         .from('ingredients')
-        .insert([{ name, unit_type: unit, stock_quantity: 0, ...nutrition }])
+        .insert([{
+            name, unit_type: unit, stock_quantity: 0,
+            calories_per_unit, protein_per_unit, fat_per_unit, fiber_per_unit
+        }])
         .select('id, name, unit_type');
 
     if (insertError) throw new Error(`Could not add "${name}" to the pantry: ${insertError.message}`);
