@@ -11,6 +11,7 @@ import { z } from 'zod';
 import { listRecipes, formatRecipeList, createRecipe, RECIPE_TYPES } from './recipes.js';
 import { addIngredient, UNITS } from './ingredients.js';
 import { repairNutrition, describeOutcome } from './repair.js';
+import { setRecipeImage } from './recipe-image.js';
 
 /**
  * A tool failure has to come back as a result with isError, not a thrown
@@ -55,8 +56,8 @@ function createWriteQueue() {
  *   invocation rather than at startup so a credentials problem surfaces as a
  *   readable tool error instead of preventing the server from starting at all.
  */
-export function createServer({ getClient, lookup }) {
-    const server = new McpServer({ name: 'meal-planner', version: '0.5.0' });
+export function createServer({ getClient, lookup, fetchImpl, readFileImpl }) {
+    const server = new McpServer({ name: 'meal-planner', version: '0.7.0' });
     const serialize = createWriteQueue();
 
     server.registerTool(
@@ -211,6 +212,65 @@ export function createServer({ getClient, lookup }) {
 
                 // A recipe that does not exist is the user's problem to fix, not a
                 // failure of the server, but it still has to read as "did not work".
+                return result.ok
+                    ? { content: [{ type: 'text', text: result.message }] }
+                    : toolError(result.message);
+            } catch (error) {
+                return toolError(error.message);
+            }
+        }
+    );
+
+    server.registerTool(
+        'add_recipe_image',
+        {
+            title: "Set a recipe's photo",
+            description:
+                "Attach a photo to one of the user's recipes, replacing any photo it already has. Give either the URL of an image or the absolute path to one on this computer — the server reads it and stores its own copy, so that source does not need to stay reachable afterward. Only JPEG, PNG, WebP and GIF images up to 5MB are supported.",
+            inputSchema: {
+                recipe: z
+                    .string()
+                    .min(1)
+                    .describe('The exact name of the recipe, as returned by list_recipes.'),
+                image_url: z
+                    .string()
+                    .url()
+                    .optional()
+                    .describe('A direct URL to the image to use. Give this or image_path, not both.'),
+                image_path: z
+                    .string()
+                    .min(1)
+                    .optional()
+                    .describe(
+                        'Absolute path to an image file on this computer, for example from the Desktop. Give this or image_url, not both.'
+                    )
+            },
+            // Overwrites and discards whatever photo was there before, which is
+            // what makes this destructive rather than a plain write like
+            // add_ingredient. openWorldHint is true because it fetches a URL
+            // outside the database, the same reason repair_nutrition has it.
+            annotations: {
+                readOnlyHint: false,
+                destructiveHint: true,
+                idempotentHint: false,
+                openWorldHint: true
+            }
+        },
+        async ({ recipe, image_url, image_path }) => {
+            if (image_url && image_path) return toolError('Give either image_url or image_path, not both.');
+            if (!image_url && !image_path) return toolError('Give either image_url or image_path.');
+
+            try {
+                const result = await serialize(async () =>
+                    setRecipeImage(await getClient(), {
+                        recipe,
+                        imageUrl: image_url,
+                        imagePath: image_path,
+                        ...(fetchImpl ? { fetchImpl } : {}),
+                        ...(readFileImpl ? { readFileImpl } : {})
+                    })
+                );
+
                 return result.ok
                     ? { content: [{ type: 'text', text: result.message }] }
                     : toolError(result.message);
