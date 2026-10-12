@@ -8,7 +8,7 @@
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { listRecipes, formatRecipeList, createRecipe, RECIPE_TYPES } from './recipes.js';
+import { listRecipes, formatRecipeList, createRecipe, setRecipeDescription, RECIPE_TYPES } from './recipes.js';
 import { addIngredient, UNITS } from './ingredients.js';
 import { repairNutrition, describeOutcome } from './repair.js';
 import { setRecipeImage } from './recipe-image.js';
@@ -57,7 +57,7 @@ function createWriteQueue() {
  *   readable tool error instead of preventing the server from starting at all.
  */
 export function createServer({ getClient, lookup, fetchImpl, readFileImpl }) {
-    const server = new McpServer({ name: 'meal-planner', version: '0.7.0' });
+    const server = new McpServer({ name: 'meal-planner', version: '0.8.0' });
     const serialize = createWriteQueue();
 
     server.registerTool(
@@ -269,6 +269,47 @@ export function createServer({ getClient, lookup, fetchImpl, readFileImpl }) {
                         ...(fetchImpl ? { fetchImpl } : {}),
                         ...(readFileImpl ? { readFileImpl } : {})
                     })
+                );
+
+                return result.ok
+                    ? { content: [{ type: 'text', text: result.message }] }
+                    : toolError(result.message);
+            } catch (error) {
+                return toolError(error.message);
+            }
+        }
+    );
+
+    server.registerTool(
+        'add_recipe_description',
+        {
+            title: "Set a recipe's description",
+            description:
+                "Set the free-text description (cooking instructions and notes) for one of the user's recipes, replacing whatever it already holds. Give an empty string to clear it.",
+            inputSchema: {
+                recipe: z
+                    .string()
+                    .min(1)
+                    .describe('The exact name of the recipe, as returned by list_recipes.'),
+                description: z
+                    .string()
+                    .describe('The description to save. An empty string clears the existing description.')
+            },
+            // Overwrites whatever description was there before, like
+            // add_recipe_image overwrites the photo, but setting the same text
+            // twice leaves the recipe in the same state, so this is idempotent
+            // unlike that tool.
+            annotations: {
+                readOnlyHint: false,
+                destructiveHint: true,
+                idempotentHint: true,
+                openWorldHint: false
+            }
+        },
+        async ({ recipe, description }) => {
+            try {
+                const result = await serialize(async () =>
+                    setRecipeDescription(await getClient(), { recipe, description })
                 );
 
                 return result.ok

@@ -7,6 +7,8 @@
  * package has no credentials. Passing the client in lets the tests supply a fake.
  */
 
+import { findRecipe } from './ingredients.js';
+
 /** The values the recipes.type column actually holds, from RECIPE_TYPES in Recipes.jsx. */
 export const RECIPE_TYPES = ['full_meal', 'main_dish', 'side', 'vegetable_side'];
 
@@ -69,6 +71,35 @@ export async function createRecipe(client, { name, type, baseServings }) {
     if (insertError) throw new Error(`Could not create "${trimmedName}": ${insertError.message}`);
 
     return { ok: true, recipe: inserted[0] };
+}
+
+/**
+ * Sets a recipe's description, replacing whatever it holds — the same
+ * column Recipes.jsx labels "Cooking Instructions". An empty string clears
+ * it rather than being rejected, since that is how the web app's textarea
+ * already behaves.
+ */
+export async function setRecipeDescription(client, { recipe: recipeName, description }) {
+    const found = await findRecipe(client, recipeName);
+
+    if (!found.ok) return { ok: false, message: found.reason };
+
+    const trimmed = description.trim();
+    const { recipe } = found;
+
+    const { error } = await client
+        .from('recipes')
+        .update({ description: trimmed })
+        .eq('id', recipe.id);
+
+    if (error) throw new Error(`Could not save the description for "${recipe.name}": ${error.message}`);
+
+    return {
+        ok: true,
+        message: trimmed
+            ? `Set the description for "${recipe.name}".`
+            : `Cleared the description for "${recipe.name}".`
+    };
 }
 
 /**

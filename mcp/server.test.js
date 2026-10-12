@@ -83,7 +83,10 @@ describe('the real executable', () => {
 
         assert.deepEqual(
             names,
-            ['add_ingredient', 'add_recipe', 'add_recipe_image', 'list_recipes', 'ping', 'repair_nutrition']
+            [
+                'add_ingredient', 'add_recipe', 'add_recipe_description', 'add_recipe_image',
+                'list_recipes', 'ping', 'repair_nutrition'
+            ]
         );
     });
 
@@ -124,6 +127,7 @@ describe('the real executable', () => {
         ping: true,
         list_recipes: true,
         add_recipe: false,
+        add_recipe_description: false,
         add_recipe_image: false,
         add_ingredient: false,
         repair_nutrition: false
@@ -308,6 +312,33 @@ describe('with a fake database', () => {
         });
 
         assert.equal(result.isError, true);
+        await mcp.close();
+    });
+
+    test('sets a recipe description', async () => {
+        const database = fakeSupabase({ recipes: [{ id: 'soup', name: 'Chicken soup', description: null }] });
+        const mcp = await connectWithDatabase(database);
+
+        const result = await mcp.callTool({
+            name: 'add_recipe_description',
+            arguments: { recipe: 'Chicken soup', description: 'Simmer for 30 minutes.' }
+        });
+
+        assert.notEqual(result.isError, true);
+        assert.equal(database.tables.recipes[0].description, 'Simmer for 30 minutes.');
+        await mcp.close();
+    });
+
+    test('reports an unknown recipe for the description tool too', async () => {
+        const mcp = await connectWithDatabase(fakeSupabase({ recipes: [] }));
+
+        const result = await mcp.callTool({
+            name: 'add_recipe_description',
+            arguments: { recipe: 'Beef wellington', description: 'Roast it.' }
+        });
+
+        assert.equal(result.isError, true);
+        assert.match(result.content[0].text, /list_recipes/);
         await mcp.close();
     });
 

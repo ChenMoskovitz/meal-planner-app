@@ -8,7 +8,7 @@
  */
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { listRecipes, formatRecipeList, createRecipe, RECIPE_TYPES } from './recipes.js';
+import { listRecipes, formatRecipeList, createRecipe, setRecipeDescription, RECIPE_TYPES } from './recipes.js';
 import { fakeSupabase } from './fake-supabase.js';
 
 const RECIPES = [
@@ -169,6 +169,61 @@ describe('createRecipe', () => {
         const client = fakeSupabase({ error: { message: 'JWT expired' } });
 
         await assert.rejects(() => createRecipe(client, { name: 'Lentil stew' }), /JWT expired/);
+    });
+});
+
+describe('setRecipeDescription', () => {
+    const recipe = () => ({ id: 'r1', name: 'Lentil stew', description: null });
+
+    test('sets the description for a recipe', async () => {
+        const client = fakeSupabase({ recipes: [recipe()] });
+
+        const result = await setRecipeDescription(client, {
+            recipe: 'Lentil stew',
+            description: 'Simmer for 30 minutes.'
+        });
+
+        assert.equal(result.ok, true);
+        assert.match(result.message, /Set the description for "Lentil stew"/);
+        assert.equal(client.tables.recipes[0].description, 'Simmer for 30 minutes.');
+    });
+
+    test('trims the description before saving it', async () => {
+        const client = fakeSupabase({ recipes: [recipe()] });
+
+        await setRecipeDescription(client, { recipe: 'Lentil stew', description: '  Simmer.  ' });
+
+        assert.equal(client.tables.recipes[0].description, 'Simmer.');
+    });
+
+    test('clears the description when given an empty string', async () => {
+        const client = fakeSupabase({ recipes: [{ ...recipe(), description: 'Old steps.' }] });
+
+        const result = await setRecipeDescription(client, { recipe: 'Lentil stew', description: '   ' });
+
+        assert.equal(result.ok, true);
+        assert.match(result.message, /Cleared the description for "Lentil stew"/);
+        assert.equal(client.tables.recipes[0].description, '');
+    });
+
+    test('says which tool to use when the recipe does not exist', async () => {
+        const client = fakeSupabase({ recipes: [] });
+
+        const result = await setRecipeDescription(client, { recipe: 'Beef wellington', description: 'Roast it.' });
+
+        assert.equal(result.ok, false);
+        assert.match(result.message, /list_recipes/);
+    });
+
+    test('refuses to guess which recipe when two share a name', async () => {
+        const client = fakeSupabase({
+            recipes: [recipe(), { id: 'r2', name: 'Lentil stew', description: null }]
+        });
+
+        const result = await setRecipeDescription(client, { recipe: 'Lentil stew', description: 'Roast it.' });
+
+        assert.equal(result.ok, false);
+        assert.match(result.message, /More than one recipe/);
     });
 });
 
