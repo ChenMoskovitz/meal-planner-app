@@ -43,8 +43,8 @@ const RECIPES = [
 ];
 
 /** Connects a client to an in-process server backed by `client` as its database. */
-async function connectWithDatabase(database, lookup) {
-    const server = createServer({ getClient: async () => database, lookup });
+async function connectWithDatabase(database, lookup, fetchImpl, readFileImpl) {
+    const server = createServer({ getClient: async () => database, lookup, fetchImpl, readFileImpl });
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
 
     const mcp = new Client({ name: 'server.test.js', version: '1.0.0' });
@@ -81,7 +81,10 @@ describe('the real executable', () => {
         const { tools } = await mcp.listTools();
         const names = tools.map(tool => tool.name).sort();
 
-        assert.deepEqual(names, ['add_ingredient', 'add_recipe', 'list_recipes', 'ping', 'repair_nutrition']);
+        assert.deepEqual(
+            names,
+            ['add_ingredient', 'add_recipe', 'add_recipe_image', 'list_recipes', 'ping', 'repair_nutrition']
+        );
     });
 
     test('describes every tool well enough for a model to choose it', async () => {
@@ -121,6 +124,7 @@ describe('the real executable', () => {
         ping: true,
         list_recipes: true,
         add_recipe: false,
+        add_recipe_image: false,
         add_ingredient: false,
         repair_nutrition: false
     };
@@ -301,6 +305,111 @@ describe('with a fake database', () => {
         const result = await mcp.callTool({
             name: 'add_recipe',
             arguments: { name: 'Lentil stew', type: 'dessert' }
+        });
+
+        assert.equal(result.isError, true);
+        await mcp.close();
+    });
+
+    test('sets a recipe photo from a URL', async () => {
+        const database = fakeSupabase({ recipes: [{ id: 'soup', name: 'Chicken soup', image_url: null }] });
+        const fetchImpl = async () => ({
+            ok: true,
+            headers: { get: () => 'image/jpeg' },
+            arrayBuffer: async () => new ArrayBuffer(10)
+        });
+        const mcp = await connectWithDatabase(database, undefined, fetchImpl);
+
+        const result = await mcp.callTool({
+            name: 'add_recipe_image',
+            arguments: { recipe: 'Chicken soup', image_url: 'https://example.com/soup.jpg' }
+        });
+
+        assert.notEqual(result.isError, true);
+        assert.match(result.content[0].text, /Set the photo for "Chicken soup"/);
+        assert.match(database.tables.recipes[0].image_url, /recipe-images/);
+        await mcp.close();
+    });
+
+    test('rejects a URL that is not an image the app supports', async () => {
+        const database = fakeSupabase({ recipes: [{ id: 'soup', name: 'Chicken soup', image_url: null }] });
+        const fetchImpl = async () => ({
+            ok: true,
+            headers: { get: () => 'application/pdf' },
+            arrayBuffer: async () => new ArrayBuffer(10)
+        });
+        const mcp = await connectWithDatabase(database, undefined, fetchImpl);
+
+        const result = await mcp.callTool({
+            name: 'add_recipe_image',
+            arguments: { recipe: 'Chicken soup', image_url: 'https://example.com/soup.pdf' }
+        });
+
+        assert.equal(result.isError, true);
+        await mcp.close();
+    });
+
+    test('rejects a value that is not a URL before it reaches the database', async () => {
+        const mcp = await connectWithDatabase(fakeSupabase({ recipes: [] }));
+
+        const result = await mcp.callTool({
+            name: 'add_recipe_image',
+            arguments: { recipe: 'Chicken soup', image_url: 'not-a-url' }
+        });
+
+        assert.equal(result.isError, true);
+        await mcp.close();
+    });
+
+    test('reports an unknown recipe for the image tool too', async () => {
+        const mcp = await connectWithDatabase(fakeSupabase({ recipes: [] }));
+
+        const result = await mcp.callTool({
+            name: 'add_recipe_image',
+            arguments: { recipe: 'Beef wellington', image_url: 'https://example.com/soup.jpg' }
+        });
+
+        assert.equal(result.isError, true);
+        assert.match(result.content[0].text, /list_recipes/);
+        await mcp.close();
+    });
+
+    test('sets a recipe photo from a local file path', async () => {
+        const database = fakeSupabase({ recipes: [{ id: 'soup', name: 'Chicken soup', image_url: null }] });
+        const readFileImpl = async () => Buffer.from('fake-bytes');
+        const mcp = await connectWithDatabase(database, undefined, undefined, readFileImpl);
+
+        const result = await mcp.callTool({
+            name: 'add_recipe_image',
+            arguments: { recipe: 'Chicken soup', image_path: '/Users/me/Desktop/soup.jpg' }
+        });
+
+        assert.notEqual(result.isError, true);
+        assert.match(database.tables.recipes[0].image_url, /recipe-images/);
+        await mcp.close();
+    });
+
+    test('rejects giving both image_url and image_path', async () => {
+        const mcp = await connectWithDatabase(fakeSupabase({ recipes: RECIPES }));
+
+        const result = await mcp.callTool({
+            name: 'add_recipe_image',
+            arguments: {
+                recipe: 'Chicken soup', image_url: 'https://example.com/soup.jpg', image_path: '/tmp/soup.jpg'
+            }
+        });
+
+        assert.equal(result.isError, true);
+        assert.match(result.content[0].text, /not both/);
+        await mcp.close();
+    });
+
+    test('rejects giving neither image_url nor image_path', async () => {
+        const mcp = await connectWithDatabase(fakeSupabase({ recipes: RECIPES }));
+
+        const result = await mcp.callTool({
+            name: 'add_recipe_image',
+            arguments: { recipe: 'Chicken soup' }
         });
 
         assert.equal(result.isError, true);

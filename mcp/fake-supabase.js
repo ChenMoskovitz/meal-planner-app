@@ -20,9 +20,14 @@
 
 let nextId = 0;
 
-export function fakeSupabase({ recipes = [], ingredients = [], recipe_ingredients = [], error = null } = {}) {
+export function fakeSupabase({
+    recipes = [], ingredients = [], recipe_ingredients = [], error = null, storageError = null
+} = {}) {
     const tables = { recipes, ingredients, recipe_ingredients };
     const calls = [];
+    // Keyed by "bucket/path", so a fixed public URL can be reversed back to a
+    // path the same way storageNameFromUrl does against the real client.
+    const storageFiles = {};
 
     function builder(table) {
         const state = { table, filters: [], operation: 'select' };
@@ -114,6 +119,32 @@ export function fakeSupabase({ recipes = [], ingredients = [], recipe_ingredient
         return chain;
     }
 
+    // A minimal stand-in for the storage client: only upload, getPublicUrl and
+    // remove, which is all recipe-image.js calls. Public URLs are built in the
+    // same shape as the real ones so storageNameFromUrl's parsing is exercised
+    // for real rather than against a shape this fake invented.
+    const storage = {
+        from(bucket) {
+            return {
+                async upload(path, body, options) {
+                    if (storageError) return { data: null, error: storageError };
+
+                    storageFiles[`${bucket}/${path}`] = { body, contentType: options?.contentType };
+                    return { data: { path }, error: null };
+                },
+                getPublicUrl(path) {
+                    return {
+                        data: { publicUrl: `https://fake.supabase.co/storage/v1/object/public/${bucket}/${path}` }
+                    };
+                },
+                async remove(paths) {
+                    for (const path of paths) delete storageFiles[`${bucket}/${path}`];
+                    return { data: paths.map(path => ({ name: path })), error: null };
+                }
+            };
+        }
+    };
+
     return {
         from: table => builder(table),
         // Lets a test assert on what was asked of the database, not only on what
@@ -121,6 +152,9 @@ export function fakeSupabase({ recipes = [], ingredients = [], recipe_ingredient
         // for a single-row fixture.
         calls,
         // The rows as they stand, so a test can check what a write actually did.
-        tables
+        tables,
+        storage,
+        // The files as they stand, keyed "bucket/path", for the same reason.
+        storageFiles
     };
 }
