@@ -300,6 +300,12 @@ function MealPlan() {
         setWeekDates(getWeekDaysFromSunday(newSunday));
     };
 
+    const goToToday = () => {
+        const sunday = getSundayOfCurrentWeek(new Date());
+        setCurrentSunday(sunday);
+        setWeekDates(getWeekDaysFromSunday(sunday));
+    };
+
     const weeklyTotals = Object.values(dailyNutrition).reduce((acc, day) => ({
         calories: acc.calories + (day.calories || 0),
         protein: acc.protein + (day.protein || 0),
@@ -323,7 +329,7 @@ function MealPlan() {
                     <h2 className="text-2xl font-extrabold text-stone-900">Weekly Dinner Plan</h2>
                     <div className="flex items-center gap-2">
                         <button className="px-4 py-2 bg-stone-100 hover:bg-stone-200 rounded-lg text-sm font-medium" onClick={() => changeWeek(-7)}>Prev</button>
-                        <button className="px-4 py-2 bg-accent-soft text-accent-dark hover:bg-accent-line rounded-lg text-sm font-bold" onClick={() => setCurrentSunday(getSundayOfCurrentWeek(new Date()))}>Today</button>
+                        <button className="px-4 py-2 bg-accent-soft text-accent-dark hover:bg-accent-line rounded-lg text-sm font-bold" onClick={goToToday}>Today</button>
                         <button className="px-4 py-2 bg-stone-100 hover:bg-stone-200 rounded-lg text-sm font-medium" onClick={() => changeWeek(7)}>Next</button>
                     </div>
                 </div>
