@@ -21,7 +21,9 @@ export default function Auth() {
         if (error) {
             showError(error.message)
         } else if (isSignUp) {
-            showSuccess('Check your email for the confirmation link!')
+            // Email confirmation is off for this project, so signUp above already
+            // returned a session — the account can be used right away.
+            showSuccess('Account created!')
         }
         setLoading(false)
     }
