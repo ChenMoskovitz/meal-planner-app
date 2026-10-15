@@ -85,7 +85,7 @@ describe('the real executable', () => {
             names,
             [
                 'add_ingredient', 'add_recipe', 'add_recipe_description', 'add_recipe_image',
-                'list_recipes', 'ping', 'repair_nutrition'
+                'list_recipes', 'ping', 'repair_nutrition', 'update_recipe'
             ]
         );
     });
@@ -129,6 +129,7 @@ describe('the real executable', () => {
         add_recipe: false,
         add_recipe_description: false,
         add_recipe_image: false,
+        update_recipe: false,
         add_ingredient: false,
         repair_nutrition: false
     };
@@ -312,6 +313,48 @@ describe('with a fake database', () => {
         });
 
         assert.equal(result.isError, true);
+        await mcp.close();
+    });
+
+    test('updates a recipe\'s type and servings', async () => {
+        const database = fakeSupabase({
+            recipes: [{ id: 'soup', name: 'Chicken soup', type: 'main_dish', base_servings: 4 }]
+        });
+        const mcp = await connectWithDatabase(database);
+
+        const result = await mcp.callTool({
+            name: 'update_recipe',
+            arguments: { recipe: 'Chicken soup', type: 'side', base_servings: 2 }
+        });
+
+        assert.notEqual(result.isError, true);
+        assert.equal(database.tables.recipes[0].type, 'side');
+        assert.equal(database.tables.recipes[0].base_servings, 2);
+        await mcp.close();
+    });
+
+    test('rejects a call to update_recipe with nothing to change', async () => {
+        const mcp = await connectWithDatabase(fakeSupabase({ recipes: RECIPES }));
+
+        const result = await mcp.callTool({
+            name: 'update_recipe',
+            arguments: { recipe: 'Chicken soup' }
+        });
+
+        assert.equal(result.isError, true);
+        await mcp.close();
+    });
+
+    test('reports an unknown recipe for update_recipe too', async () => {
+        const mcp = await connectWithDatabase(fakeSupabase({ recipes: [] }));
+
+        const result = await mcp.callTool({
+            name: 'update_recipe',
+            arguments: { recipe: 'Beef wellington', base_servings: 4 }
+        });
+
+        assert.equal(result.isError, true);
+        assert.match(result.content[0].text, /list_recipes/);
         await mcp.close();
     });
 
