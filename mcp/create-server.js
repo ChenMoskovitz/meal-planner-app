@@ -8,7 +8,7 @@
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { listRecipes, formatRecipeList, createRecipe, setRecipeDescription, RECIPE_TYPES } from './recipes.js';
+import { listRecipes, formatRecipeList, createRecipe, updateRecipe, setRecipeDescription, RECIPE_TYPES } from './recipes.js';
 import { addIngredient, UNITS } from './ingredients.js';
 import { repairNutrition, describeOutcome } from './repair.js';
 import { setRecipeImage } from './recipe-image.js';
@@ -57,7 +57,7 @@ function createWriteQueue() {
  *   readable tool error instead of preventing the server from starting at all.
  */
 export function createServer({ getClient, lookup, fetchImpl, readFileImpl }) {
-    const server = new McpServer({ name: 'meal-planner', version: '0.8.0' });
+    const server = new McpServer({ name: 'meal-planner', version: '0.9.0' });
     const serialize = createWriteQueue();
 
     server.registerTool(
@@ -274,6 +274,63 @@ export function createServer({ getClient, lookup, fetchImpl, readFileImpl }) {
                 return result.ok
                     ? { content: [{ type: 'text', text: result.message }] }
                     : toolError(result.message);
+            } catch (error) {
+                return toolError(error.message);
+            }
+        }
+    );
+
+    server.registerTool(
+        'update_recipe',
+        {
+            title: 'Update a recipe',
+            description:
+                "Change an existing recipe's name, type and/or serving count. Give only the fields that should change — anything left out keeps its current value. Give type as an empty string to clear it back to untyped.",
+            inputSchema: {
+                recipe: z
+                    .string()
+                    .min(1)
+                    .describe('The exact current name of the recipe, as returned by list_recipes.'),
+                name: z
+                    .string()
+                    .min(1)
+                    .optional()
+                    .describe('A new name for the recipe. Omit to keep the current name.'),
+                type: z
+                    .union([z.enum(RECIPE_TYPES), z.literal('')])
+                    .optional()
+                    .describe(
+                        'A new type for the recipe. Give an empty string to clear it back to untyped. Omit to keep the current type.'
+                    ),
+                base_servings: z
+                    .number()
+                    .int()
+                    .positive()
+                    .optional()
+                    .describe('A new serving count. Omit to keep the current value.')
+            },
+            annotations: {
+                readOnlyHint: false,
+                destructiveHint: true,
+                idempotentHint: true,
+                openWorldHint: false
+            }
+        },
+        async ({ recipe, name, type, base_servings }) => {
+            try {
+                const result = await serialize(async () =>
+                    updateRecipe(await getClient(), { recipe, name, type, baseServings: base_servings })
+                );
+
+                if (!result.ok) return toolError(result.reason);
+
+                const { recipe: updated } = result;
+                const kind = updated.type ? `, a ${updated.type.replace(/_/g, ' ')}` : ', untyped';
+                const servings = updated.base_servings
+                    ? `, serving ${updated.base_servings}`
+                    : ', no serving count set';
+
+                return { content: [{ type: 'text', text: `Updated "${updated.name}"${kind}${servings}.` }] };
             } catch (error) {
                 return toolError(error.message);
             }

@@ -74,6 +74,57 @@ export async function createRecipe(client, { name, type, baseServings }) {
 }
 
 /**
+ * Updates a recipe's name, type and/or base_servings.
+ *
+ * Only the fields given are touched — add_recipe can only set these at
+ * creation, so this is the only way to change them afterward. type is passed
+ * as '' to clear it back to untyped, the same convention
+ * setRecipeDescription uses for clearing the description.
+ */
+export async function updateRecipe(client, { recipe: recipeName, name, type, baseServings }) {
+    if (name === undefined && type === undefined && baseServings === undefined) {
+        return { ok: false, reason: 'Give at least one of name, type or base_servings to change.' };
+    }
+
+    const found = await findRecipe(client, recipeName);
+
+    if (!found.ok) return { ok: false, reason: found.reason };
+
+    const { recipe: existing } = found;
+    const updates = {};
+
+    if (name !== undefined) {
+        const trimmedName = name.trim();
+
+        if (!trimmedName) {
+            return { ok: false, reason: 'A recipe needs a name.' };
+        }
+
+        const { data: matches, error: lookupError } = await client
+            .from('recipes')
+            .select('id')
+            .ilike('name', trimmedName);
+
+        if (lookupError) throw new Error(`Could not check for a name clash: ${lookupError.message}`);
+
+        if ((matches ?? []).some(match => match.id !== existing.id)) {
+            return { ok: false, reason: `"${trimmedName}" already exists. Pick a different name.` };
+        }
+
+        updates.name = trimmedName;
+    }
+
+    if (type !== undefined) updates.type = type === '' ? null : type;
+    if (baseServings !== undefined) updates.base_servings = baseServings;
+
+    const { error } = await client.from('recipes').update(updates).eq('id', existing.id);
+
+    if (error) throw new Error(`Could not update "${existing.name}": ${error.message}`);
+
+    return { ok: true, recipe: { ...existing, ...updates } };
+}
+
+/**
  * Sets a recipe's description, replacing whatever it holds — the same
  * column Recipes.jsx labels "Cooking Instructions". An empty string clears
  * it rather than being rejected, since that is how the web app's textarea
