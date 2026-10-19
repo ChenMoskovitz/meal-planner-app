@@ -12,6 +12,7 @@ import { listRecipes, formatRecipeList, createRecipe, updateRecipe, setRecipeDes
 import { addIngredient, UNITS } from './ingredients.js';
 import { repairNutrition, describeOutcome } from './repair.js';
 import { setRecipeImage } from './recipe-image.js';
+import { planMeal, SLOTS } from './plan.js';
 
 /**
  * A tool failure has to come back as a result with isError, not a thrown
@@ -57,7 +58,7 @@ function createWriteQueue() {
  *   readable tool error instead of preventing the server from starting at all.
  */
 export function createServer({ getClient, lookup, fetchImpl, readFileImpl }) {
-    const server = new McpServer({ name: 'meal-planner', version: '0.9.0' });
+    const server = new McpServer({ name: 'meal-planner', version: '0.10.0' });
     const serialize = createWriteQueue();
 
     server.registerTool(
@@ -212,6 +213,51 @@ export function createServer({ getClient, lookup, fetchImpl, readFileImpl }) {
 
                 // A recipe that does not exist is the user's problem to fix, not a
                 // failure of the server, but it still has to read as "did not work".
+                return result.ok
+                    ? { content: [{ type: 'text', text: result.message }] }
+                    : toolError(result.message);
+            } catch (error) {
+                return toolError(error.message);
+            }
+        }
+    );
+
+    server.registerTool(
+        'plan_meal',
+        {
+            title: 'Plan a meal',
+            description:
+                "Assign a recipe to one slot in the weekly meal plan, for one day. Replaces whatever was already planned for that day and slot, if anything. The recipe's type must match the slot: main takes a main dish or full meal, side takes a side, veg takes a vegetable side.",
+            inputSchema: {
+                day: z
+                    .string()
+                    .regex(/^\d{4}-\d{2}-\d{2}$/)
+                    .describe('The date this meal is planned for, as YYYY-MM-DD.'),
+                slot: z.enum(SLOTS).describe('Which part of the meal this recipe fills.'),
+                recipe: z
+                    .string()
+                    .min(1)
+                    .describe('The exact name of the recipe, as returned by list_recipes.'),
+                servings: z
+                    .number()
+                    .int()
+                    .positive()
+                    .optional()
+                    .describe("How many people to plan for. Omit to use the recipe's own base_servings.")
+            },
+            annotations: {
+                readOnlyHint: false,
+                destructiveHint: true,
+                idempotentHint: true,
+                openWorldHint: false
+            }
+        },
+        async ({ day, slot, recipe, servings }) => {
+            try {
+                const result = await serialize(async () =>
+                    planMeal(await getClient(), { day, slot, recipe, servings })
+                );
+
                 return result.ok
                     ? { content: [{ type: 'text', text: result.message }] }
                     : toolError(result.message);
