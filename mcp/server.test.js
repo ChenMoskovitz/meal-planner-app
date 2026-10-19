@@ -85,7 +85,7 @@ describe('the real executable', () => {
             names,
             [
                 'add_ingredient', 'add_recipe', 'add_recipe_description', 'add_recipe_image',
-                'list_recipes', 'ping', 'repair_nutrition', 'update_recipe'
+                'list_recipes', 'ping', 'plan_meal', 'repair_nutrition', 'update_recipe'
             ]
         );
     });
@@ -130,6 +130,7 @@ describe('the real executable', () => {
         add_recipe_description: false,
         add_recipe_image: false,
         update_recipe: false,
+        plan_meal: false,
         add_ingredient: false,
         repair_nutrition: false
     };
@@ -351,6 +352,62 @@ describe('with a fake database', () => {
         const result = await mcp.callTool({
             name: 'update_recipe',
             arguments: { recipe: 'Beef wellington', base_servings: 4 }
+        });
+
+        assert.equal(result.isError, true);
+        assert.match(result.content[0].text, /list_recipes/);
+        await mcp.close();
+    });
+
+    test('plans a meal for a day and slot', async () => {
+        const database = fakeSupabase({
+            recipes: [{ id: 'soup', name: 'Chicken soup', type: 'main_dish', base_servings: 4 }]
+        });
+        const mcp = await connectWithDatabase(database);
+
+        const result = await mcp.callTool({
+            name: 'plan_meal',
+            arguments: { day: '2026-10-19', slot: 'main', recipe: 'Chicken soup' }
+        });
+
+        assert.notEqual(result.isError, true);
+        assert.equal(database.tables.plan_recipes.length, 1);
+        await mcp.close();
+    });
+
+    test('rejects a recipe whose type does not match the slot', async () => {
+        const database = fakeSupabase({
+            recipes: [{ id: 'rice', name: 'Rice', type: 'side', base_servings: 2 }]
+        });
+        const mcp = await connectWithDatabase(database);
+
+        const result = await mcp.callTool({
+            name: 'plan_meal',
+            arguments: { day: '2026-10-19', slot: 'main', recipe: 'Rice' }
+        });
+
+        assert.equal(result.isError, true);
+        await mcp.close();
+    });
+
+    test('rejects a day that is not YYYY-MM-DD', async () => {
+        const mcp = await connectWithDatabase(fakeSupabase({ recipes: RECIPES }));
+
+        const result = await mcp.callTool({
+            name: 'plan_meal',
+            arguments: { day: '10/19/2026', slot: 'main', recipe: 'Chicken soup' }
+        });
+
+        assert.equal(result.isError, true);
+        await mcp.close();
+    });
+
+    test('reports an unknown recipe for plan_meal too', async () => {
+        const mcp = await connectWithDatabase(fakeSupabase({ recipes: [] }));
+
+        const result = await mcp.callTool({
+            name: 'plan_meal',
+            arguments: { day: '2026-10-19', slot: 'main', recipe: 'Beef wellington' }
         });
 
         assert.equal(result.isError, true);

@@ -21,9 +21,9 @@
 let nextId = 0;
 
 export function fakeSupabase({
-    recipes = [], ingredients = [], recipe_ingredients = [], error = null, storageError = null
+    recipes = [], ingredients = [], recipe_ingredients = [], plan_recipes = [], error = null, storageError = null
 } = {}) {
-    const tables = { recipes, ingredients, recipe_ingredients };
+    const tables = { recipes, ingredients, recipe_ingredients, plan_recipes };
     const calls = [];
     // Keyed by "bucket/path", so a fixed public URL can be reversed back to a
     // path the same way storageNameFromUrl does against the real client.
@@ -75,6 +75,10 @@ export function fakeSupabase({
                 state.values = values;
                 return chain;
             },
+            delete() {
+                state.operation = 'delete';
+                return chain;
+            },
             then(resolve) {
                 // Flattened for assertions: `filters` keeps the match kind,
                 // `where` is the plain {column: value} a test usually wants.
@@ -95,6 +99,13 @@ export function fakeSupabase({
                 if (state.operation === 'update') {
                     const targets = matching();
                     for (const row of targets) Object.assign(row, state.values);
+
+                    return resolve({ data: targets, error: null });
+                }
+
+                if (state.operation === 'delete') {
+                    const targets = matching();
+                    tables[table] = (tables[table] ?? []).filter(row => !targets.includes(row));
 
                     return resolve({ data: targets, error: null });
                 }
