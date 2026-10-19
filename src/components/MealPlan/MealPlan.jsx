@@ -150,6 +150,14 @@ function MealPlan() {
         }
     }
 
+    // The dropdown counterpart to addComponentToDay's random pick — shared by
+    // the main, side and veg selects so choosing one doesn't drop the others.
+    function setComponentForDay(day, typeKey, recipeId) {
+        const selected = recipes.find(r => r.id === recipeId);
+        if (!selected) return;
+        setPlan(prev => ({ ...prev, [day]: { ...prev[day], [typeKey]: selected } }));
+    }
+
     function setRandomForDay(day) {
         const mains = recipes.filter(r => r.type === 'main_dish' || r.type === 'full_meal');
         if (mains.length > 0) {
@@ -393,20 +401,44 @@ function MealPlan() {
                                         {dayPlan.side && <div className="text-[11px] text-stone-600 mt-2 truncate"><span className="text-stone-600">Side</span> {dayPlan.side.name}</div>}
                                         {dayPlan.veg && <div className="text-[11px] text-stone-600 mt-0.5 truncate"><span className="text-stone-600">Veg</span> {dayPlan.veg.name}</div>}
 
-                                        <div className="mt-3 pt-2 border-t border-stone-50 space-y-1">
+                                        <div className="mt-3 pt-2 border-t border-stone-50 space-y-2">
                                             {dayPlan.main?.type !== 'full_meal' && (
                                                 <>
                                                     {!dayPlan.side && (
-                                                        <button
-                                                            className="w-full text-[9px] font-bold py-1 bg-stone-50 text-stone-600 hover:bg-good-soft hover:text-good rounded transition-colors"
-                                                            onClick={() => addComponentToDay(dateStr, 'side', 'side')}
-                                                        >+ Side</button>
+                                                        <div className="space-y-1">
+                                                            <select
+                                                                aria-label={`Choose a side dish for ${dateStr}`}
+                                                                className="w-full text-[9px] p-1.5 bg-stone-50 border border-line rounded-lg outline-none"
+                                                                onChange={(e) => setComponentForDay(dateStr, 'side', e.target.value)}
+                                                            >
+                                                                <option value="">Side...</option>
+                                                                {recipes.filter(r => r.type === 'side').map(r => (
+                                                                    <option key={r.id} value={r.id}>{r.name}</option>
+                                                                ))}
+                                                            </select>
+                                                            <button
+                                                                className="w-full text-[9px] font-bold py-1 bg-stone-50 text-stone-600 hover:bg-good-soft hover:text-good rounded transition-colors"
+                                                                onClick={() => addComponentToDay(dateStr, 'side', 'side')}
+                                                            >Random Side</button>
+                                                        </div>
                                                     )}
                                                     {!dayPlan.veg && (
-                                                        <button
-                                                            className="w-full text-[9px] font-bold py-1 bg-stone-50 text-stone-600 hover:bg-good-soft hover:text-good rounded transition-colors"
-                                                            onClick={() => addComponentToDay(dateStr, 'veg', 'vegetable_side')}
-                                                        >+ Veg</button>
+                                                        <div className="space-y-1">
+                                                            <select
+                                                                aria-label={`Choose a vegetable side for ${dateStr}`}
+                                                                className="w-full text-[9px] p-1.5 bg-stone-50 border border-line rounded-lg outline-none"
+                                                                onChange={(e) => setComponentForDay(dateStr, 'veg', e.target.value)}
+                                                            >
+                                                                <option value="">Veg...</option>
+                                                                {recipes.filter(r => r.type === 'vegetable_side').map(r => (
+                                                                    <option key={r.id} value={r.id}>{r.name}</option>
+                                                                ))}
+                                                            </select>
+                                                            <button
+                                                                className="w-full text-[9px] font-bold py-1 bg-stone-50 text-stone-600 hover:bg-good-soft hover:text-good rounded transition-colors"
+                                                                onClick={() => addComponentToDay(dateStr, 'veg', 'vegetable_side')}
+                                                            >Random Veg</button>
+                                                        </div>
                                                     )}
                                                 </>
                                             )}
@@ -416,10 +448,11 @@ function MealPlan() {
                                 </div>
                             ) : (
                                 <div className="space-y-2">
-                                    <select aria-label={`Choose a main dish for ${dateStr}`} className="w-full text-[10px] p-2 bg-stone-50 border border-line rounded-lg outline-none" onChange={(e) => {
-                                        const selected = recipes.find(r => r.id === e.target.value);
-                                        setPlan(prev => ({ ...prev, [dateStr]: { main: selected } }));
-                                    }}>
+                                    <select
+                                        aria-label={`Choose a main dish for ${dateStr}`}
+                                        className="w-full text-[10px] p-2 bg-stone-50 border border-line rounded-lg outline-none"
+                                        onChange={(e) => setComponentForDay(dateStr, 'main', e.target.value)}
+                                    >
                                         <option value="">Main...</option>
                                         {recipes.filter(r => r.type === 'main_dish' || r.type === 'full_meal').map(r => (
                                             <option key={r.id} value={r.id}>{r.name}</option>
