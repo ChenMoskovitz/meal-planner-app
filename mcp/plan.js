@@ -18,6 +18,79 @@ const TYPES_FOR_SLOT = {
     veg: ['vegetable_side']
 };
 
+// Pure calendar-date arithmetic on the YYYY-MM-DD string itself, via Date.UTC —
+// the same bug #12 class (a local Date silently landing on the wrong day) that
+// getWeekDaysFromSunday.js was fixed for, avoided here by never touching a
+// local Date at all.
+function addDays(day, n) {
+    const [year, month, date] = day.split('-').map(Number);
+    return new Date(Date.UTC(year, month - 1, date + n)).toISOString().slice(0, 10);
+}
+
+function weekdayLabel(day) {
+    const [year, month, date] = day.split('-').map(Number);
+    return new Date(Date.UTC(year, month - 1, date)).toLocaleDateString('en-US', {
+        weekday: 'short',
+        timeZone: 'UTC'
+    });
+}
+
+/**
+ * Reads the 7 days from startDay (meant to be a Sunday, matching the web
+ * app's own week model), each with whatever is planned for its three slots.
+ *
+ * Exists so a model can be asked to "fill the empty days" without first
+ * overwriting days that already have something — plan_meal only writes, it
+ * has no way on its own to tell an empty slot from a filled one.
+ */
+export async function getWeekPlan(client, { startDay }) {
+    const days = Array.from({ length: 7 }, (_, i) => addDays(startDay, i));
+    const daySet = new Set(days);
+
+    const { data: planned, error: planError } = await client
+        .from('plan_recipes')
+        .select('day_of_week, slot_type, recipe_id');
+
+    if (planError) throw new Error(`Could not read the plan: ${planError.message}`);
+
+    // Fetched unfiltered and matched up here rather than joined in the query:
+    // the fake client backing the mcp test suite has no range or "in" filter,
+    // only eq/ilike, and a week's worth of rows is too few to matter either way.
+    const { data: recipes, error: recipeError } = await client
+        .from('recipes')
+        .select('id, name');
+
+    if (recipeError) throw new Error(`Could not read recipes: ${recipeError.message}`);
+
+    const nameById = new Map((recipes ?? []).map(recipe => [recipe.id, recipe.name]));
+
+    const bySlot = new Map();
+    for (const row of planned ?? []) {
+        if (!daySet.has(row.day_of_week)) continue;
+        bySlot.set(`${row.day_of_week}|${row.slot_type}`, nameById.get(row.recipe_id) ?? 'unknown recipe');
+    }
+
+    return days.map(day => ({
+        day,
+        weekday: weekdayLabel(day),
+        slots: Object.fromEntries(SLOTS.map(slot => [slot, bySlot.get(`${day}|${slot}`) ?? null]))
+    }));
+}
+
+/**
+ * Renders a week's plan as text for a tool result: one line per day, empty
+ * slots spelled out rather than left blank, so "fill the empty days" has
+ * something unambiguous to act on.
+ */
+export function formatWeekPlan(weekPlan) {
+    const lines = weekPlan.map(({ day, weekday, slots }) => {
+        const parts = SLOTS.map(slot => `${slot}: ${slots[slot] ?? 'empty'}`);
+        return `${day} (${weekday}): ${parts.join(', ')}`;
+    });
+
+    return lines.join('\n');
+}
+
 export async function planMeal(client, { day, slot, recipe: recipeName, servings }) {
     const found = await findRecipe(client, recipeName);
 
