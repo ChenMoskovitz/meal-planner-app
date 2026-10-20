@@ -85,7 +85,7 @@ describe('the real executable', () => {
             names,
             [
                 'add_ingredient', 'add_recipe', 'add_recipe_description', 'add_recipe_image',
-                'list_recipes', 'ping', 'plan_meal', 'repair_nutrition', 'update_recipe'
+                'get_recipe', 'list_recipes', 'ping', 'plan_meal', 'repair_nutrition', 'update_recipe'
             ]
         );
     });
@@ -126,6 +126,7 @@ describe('the real executable', () => {
     const READ_ONLY = {
         ping: true,
         list_recipes: true,
+        get_recipe: true,
         add_recipe: false,
         add_recipe_description: false,
         add_recipe_image: false,
@@ -249,6 +250,38 @@ describe('with a fake database', () => {
 
         assert.notEqual(result.isError, true);
         assert.match(result.content[0].text, /No recipes found/);
+        await mcp.close();
+    });
+
+    test('gets a recipe\'s details, including ingredients and nutrition', async () => {
+        const database = fakeSupabase({
+            recipes: [{ id: 'soup', name: 'Chicken soup', type: 'main_dish', base_servings: 4 }],
+            recipe_ingredients: [{
+                recipe_id: 'soup',
+                amount: 400,
+                ingredients: {
+                    name: 'Chicken breast', unit_type: 'g',
+                    calories_per_unit: 165, protein_per_unit: 31, fat_per_unit: 3.6, fiber_per_unit: 0
+                }
+            }]
+        });
+        const mcp = await connectWithDatabase(database);
+
+        const result = await mcp.callTool({ name: 'get_recipe', arguments: { recipe: 'Chicken soup' } });
+
+        assert.notEqual(result.isError, true);
+        assert.match(result.content[0].text, /Chicken breast: 400g/);
+        assert.match(result.content[0].text, /Nutrition per serving/);
+        await mcp.close();
+    });
+
+    test('reports an unknown recipe for get_recipe too', async () => {
+        const mcp = await connectWithDatabase(fakeSupabase({ recipes: [] }));
+
+        const result = await mcp.callTool({ name: 'get_recipe', arguments: { recipe: 'Beef wellington' } });
+
+        assert.equal(result.isError, true);
+        assert.match(result.content[0].text, /list_recipes/);
         await mcp.close();
     });
 

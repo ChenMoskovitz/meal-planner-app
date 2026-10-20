@@ -8,7 +8,10 @@
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { listRecipes, formatRecipeList, createRecipe, updateRecipe, setRecipeDescription, RECIPE_TYPES } from './recipes.js';
+import {
+    listRecipes, formatRecipeList, createRecipe, updateRecipe, setRecipeDescription,
+    getRecipeDetails, formatRecipeDetails, RECIPE_TYPES
+} from './recipes.js';
 import { addIngredient, UNITS } from './ingredients.js';
 import { repairNutrition, describeOutcome } from './repair.js';
 import { setRecipeImage } from './recipe-image.js';
@@ -58,7 +61,7 @@ function createWriteQueue() {
  *   readable tool error instead of preventing the server from starting at all.
  */
 export function createServer({ getClient, lookup, fetchImpl, readFileImpl }) {
-    const server = new McpServer({ name: 'meal-planner', version: '0.10.0' });
+    const server = new McpServer({ name: 'meal-planner', version: '0.11.0' });
     const serialize = createWriteQueue();
 
     server.registerTool(
@@ -109,6 +112,33 @@ export function createServer({ getClient, lookup, fetchImpl, readFileImpl }) {
                 const recipes = await listRecipes(client, { type });
 
                 return { content: [{ type: 'text', text: formatRecipeList(recipes, { type }) }] };
+            } catch (error) {
+                return toolError(error.message);
+            }
+        }
+    );
+
+    server.registerTool(
+        'get_recipe',
+        {
+            title: 'Get a recipe\'s details',
+            description:
+                "Read everything about one of the user's recipes: its type, servings, description, photo, ingredients and nutrition per serving. Use this before planning meals around a specific constraint — which recipes contain an ingredient, or how much protein one serving has — since list_recipes alone has no ingredients or nutrition to check that against.",
+            inputSchema: {
+                recipe: z
+                    .string()
+                    .min(1)
+                    .describe('The exact name of the recipe, as returned by list_recipes.')
+            },
+            annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false }
+        },
+        async ({ recipe }) => {
+            try {
+                const result = await getRecipeDetails(await getClient(), recipe);
+
+                return result.ok
+                    ? { content: [{ type: 'text', text: formatRecipeDetails(result.recipe) }] }
+                    : toolError(result.reason);
             } catch (error) {
                 return toolError(error.message);
             }

@@ -8,6 +8,7 @@
  */
 
 import { findRecipe } from './ingredients.js';
+import { sumIngredientNutrition, perServing } from './recipe-nutrition.js';
 
 /** The values the recipes.type column actually holds, from RECIPE_TYPES in Recipes.jsx. */
 export const RECIPE_TYPES = ['full_meal', 'main_dish', 'side', 'vegetable_side'];
@@ -178,4 +179,82 @@ export function formatRecipeList(recipes, { type } = {}) {
     });
 
     return `${recipes.length} ${scope}:\n${lines.join('\n')}`;
+}
+
+/**
+ * Reads back everything about one recipe: its own fields, its ingredients and
+ * its nutrition per serving. This is what a model needs to reason about a
+ * request like "plan two dinners with chicken" or "average 50g protein a
+ * day" — list_recipes alone has no ingredients or nutrition to check that
+ * against.
+ */
+export async function getRecipeDetails(client, recipeName) {
+    const found = await findRecipe(client, recipeName);
+
+    if (!found.ok) return { ok: false, reason: found.reason };
+
+    const { recipe } = found;
+
+    const { data: rows, error } = await client
+        .from('recipe_ingredients')
+        .select(`
+            amount,
+            ingredients:ingredient_id (name, unit_type, calories_per_unit, protein_per_unit, fat_per_unit, fiber_per_unit)
+        `)
+        .eq('recipe_id', recipe.id);
+
+    if (error) throw new Error(`Could not read "${recipe.name}"'s ingredients: ${error.message}`);
+
+    const ingredientRows = rows ?? [];
+
+    const ingredients = ingredientRows
+        .filter(row => row.ingredients)
+        .map(row => ({ name: row.ingredients.name, amount: row.amount, unit: row.ingredients.unit_type }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+    return {
+        ok: true,
+        recipe: {
+            name: recipe.name,
+            type: recipe.type,
+            base_servings: recipe.base_servings,
+            description: recipe.description,
+            image_url: recipe.image_url,
+            ingredients,
+            nutrition_per_serving: perServing(sumIngredientNutrition(ingredientRows), recipe.base_servings)
+        }
+    };
+}
+
+/**
+ * Renders one recipe's details as text for a tool result.
+ */
+export function formatRecipeDetails(recipe) {
+    const { name, type, base_servings, description, image_url, ingredients, nutrition_per_serving } = recipe;
+    const kind = type ? type.replace(/_/g, ' ') : 'untyped';
+    const servings = base_servings ? `serves ${base_servings}` : 'no serving count set';
+
+    const lines = [`${name} — ${kind}, ${servings}`];
+
+    if (description) lines.push('', description);
+
+    lines.push('', ingredients.length ? 'Ingredients:' : 'No ingredients yet — use add_ingredient to add some.');
+
+    for (const ingredient of ingredients) {
+        lines.push(`- ${ingredient.name}: ${ingredient.amount}${ingredient.unit}`);
+    }
+
+    // Dividing zero ingredients across servings is still zero, not a real answer.
+    if (ingredients.length) {
+        const n = nutrition_per_serving;
+        lines.push(
+            '',
+            `Nutrition per serving: ${n.calories.toFixed(0)} kcal, ${n.protein.toFixed(1)}g protein, `
+            + `${n.fat.toFixed(1)}g fat, ${n.fiber.toFixed(1)}g fiber`
+        );
+    }
+
+    if (image_url) lines.push('', `Photo: ${image_url}`);
+
+    return lines.join('\n');
 }

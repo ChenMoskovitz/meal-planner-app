@@ -9,7 +9,8 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    listRecipes, formatRecipeList, createRecipe, updateRecipe, setRecipeDescription, RECIPE_TYPES
+    listRecipes, formatRecipeList, createRecipe, updateRecipe, setRecipeDescription,
+    getRecipeDetails, formatRecipeDetails, RECIPE_TYPES
 } from './recipes.js';
 import { fakeSupabase } from './fake-supabase.js';
 
@@ -332,6 +333,158 @@ describe('setRecipeDescription', () => {
 
         assert.equal(result.ok, false);
         assert.match(result.message, /More than one recipe/);
+    });
+});
+
+describe('getRecipeDetails', () => {
+    const recipe = () => ({
+        id: 'soup', name: 'Chicken soup', type: 'main_dish', base_servings: 4, description: 'Simmer it.',
+        image_url: 'https://x.supabase.co/recipe-images/soup.jpg'
+    });
+
+    test('reads back a recipe\'s own fields', async () => {
+        const client = fakeSupabase({ recipes: [recipe()] });
+
+        const result = await getRecipeDetails(client, 'Chicken soup');
+
+        assert.equal(result.ok, true);
+        assert.equal(result.recipe.name, 'Chicken soup');
+        assert.equal(result.recipe.type, 'main_dish');
+        assert.equal(result.recipe.base_servings, 4);
+        assert.equal(result.recipe.description, 'Simmer it.');
+        assert.equal(result.recipe.image_url, 'https://x.supabase.co/recipe-images/soup.jpg');
+    });
+
+    test('lists the ingredients, sorted by name', async () => {
+        const client = fakeSupabase({
+            recipes: [recipe()],
+            recipe_ingredients: [
+                { recipe_id: 'soup', amount: 400, ingredients: { name: 'Onion', unit_type: 'g' } },
+                { recipe_id: 'soup', amount: 1000, ingredients: { name: 'Chicken breast', unit_type: 'g' } }
+            ]
+        });
+
+        const result = await getRecipeDetails(client, 'Chicken soup');
+
+        assert.deepEqual(result.recipe.ingredients, [
+            { name: 'Chicken breast', amount: 1000, unit: 'g' },
+            { name: 'Onion', amount: 400, unit: 'g' }
+        ]);
+    });
+
+    test('skips a row whose ingredient join came back empty', async () => {
+        const client = fakeSupabase({
+            recipes: [recipe()],
+            recipe_ingredients: [{ recipe_id: 'soup', amount: 100, ingredients: null }]
+        });
+
+        const result = await getRecipeDetails(client, 'Chicken soup');
+
+        assert.deepEqual(result.recipe.ingredients, []);
+    });
+
+    test('computes nutrition per serving', async () => {
+        const client = fakeSupabase({
+            recipes: [recipe()],
+            recipe_ingredients: [{
+                recipe_id: 'soup',
+                amount: 400,
+                ingredients: {
+                    name: 'Chicken breast', unit_type: 'g',
+                    calories_per_unit: 165, protein_per_unit: 31, fat_per_unit: 3.6, fiber_per_unit: 0
+                }
+            }]
+        });
+
+        const result = await getRecipeDetails(client, 'Chicken soup');
+
+        // 400g at per-100g figures, divided across 4 servings.
+        assert.equal(result.recipe.nutrition_per_serving.calories, 165);
+        assert.equal(result.recipe.nutrition_per_serving.protein, 31);
+    });
+
+    test('says which tool to use when the recipe does not exist', async () => {
+        const client = fakeSupabase({ recipes: [] });
+
+        const result = await getRecipeDetails(client, 'Beef wellington');
+
+        assert.equal(result.ok, false);
+        assert.match(result.reason, /list_recipes/);
+    });
+
+    test('throws when the ingredients query fails', async () => {
+        const client = fakeSupabase({ recipes: [recipe()], error: { message: 'JWT expired' } });
+
+        await assert.rejects(() => getRecipeDetails(client, 'Chicken soup'), /JWT expired/);
+    });
+});
+
+describe('formatRecipeDetails', () => {
+    test('names the recipe, its type and servings', () => {
+        const text = formatRecipeDetails({
+            name: 'Chicken soup', type: 'main_dish', base_servings: 4, description: '', image_url: null,
+            ingredients: [], nutrition_per_serving: { calories: 0, protein: 0, fat: 0, fiber: 0 }
+        });
+
+        assert.match(text, /Chicken soup — main dish, serves 4/);
+    });
+
+    test('says a serving count is missing rather than implying one', () => {
+        const text = formatRecipeDetails({
+            name: 'Chicken soup', type: 'main_dish', base_servings: null, description: '', image_url: null,
+            ingredients: [], nutrition_per_serving: { calories: 0, protein: 0, fat: 0, fiber: 0 }
+        });
+
+        assert.match(text, /no serving count set/);
+    });
+
+    test('includes the description when there is one', () => {
+        const text = formatRecipeDetails({
+            name: 'Chicken soup', type: 'main_dish', base_servings: 4, description: 'Simmer for 30 minutes.',
+            image_url: null, ingredients: [], nutrition_per_serving: { calories: 0, protein: 0, fat: 0, fiber: 0 }
+        });
+
+        assert.match(text, /Simmer for 30 minutes\./);
+    });
+
+    test('points at add_ingredient when there are no ingredients yet', () => {
+        const text = formatRecipeDetails({
+            name: 'Chicken soup', type: 'main_dish', base_servings: 4, description: '', image_url: null,
+            ingredients: [], nutrition_per_serving: { calories: 0, protein: 0, fat: 0, fiber: 0 }
+        });
+
+        assert.match(text, /add_ingredient/);
+        assert.doesNotMatch(text, /Nutrition per serving/);
+    });
+
+    test('lists each ingredient with its amount and unit', () => {
+        const text = formatRecipeDetails({
+            name: 'Chicken soup', type: 'main_dish', base_servings: 4, description: '', image_url: null,
+            ingredients: [{ name: 'Onion', amount: 100, unit: 'g' }],
+            nutrition_per_serving: { calories: 0, protein: 0, fat: 0, fiber: 0 }
+        });
+
+        assert.match(text, /- Onion: 100g/);
+    });
+
+    test('shows nutrition per serving when there are ingredients', () => {
+        const text = formatRecipeDetails({
+            name: 'Chicken soup', type: 'main_dish', base_servings: 4, description: '', image_url: null,
+            ingredients: [{ name: 'Onion', amount: 100, unit: 'g' }],
+            nutrition_per_serving: { calories: 165.4, protein: 31.2, fat: 3.6, fiber: 0.5 }
+        });
+
+        assert.match(text, /165 kcal, 31\.2g protein, 3\.6g fat, 0\.5g fiber/);
+    });
+
+    test('includes the photo URL when there is one', () => {
+        const text = formatRecipeDetails({
+            name: 'Chicken soup', type: 'main_dish', base_servings: 4, description: '',
+            image_url: 'https://x.supabase.co/recipe-images/soup.jpg',
+            ingredients: [], nutrition_per_serving: { calories: 0, protein: 0, fat: 0, fiber: 0 }
+        });
+
+        assert.match(text, /Photo: https:\/\/x\.supabase\.co\/recipe-images\/soup\.jpg/);
     });
 });
 
