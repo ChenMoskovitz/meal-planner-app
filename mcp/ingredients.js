@@ -22,10 +22,10 @@ export const UNITS = ['g', 'ml'];
 export async function findRecipe(client, name) {
     const { data, error } = await client
         .from('recipes')
-        // image_url, type and base_servings ride along so recipe-image.js and
-        // plan.js can reuse this lookup instead of repeating the match-count
-        // handling below.
-        .select('id, name, image_url, type, base_servings')
+        // image_url, type, base_servings and description ride along so
+        // recipe-image.js, plan.js and getRecipeDetails can reuse this lookup
+        // instead of repeating the match-count handling below.
+        .select('id, name, image_url, type, base_servings, description')
         .ilike('name', name);
 
     if (error) throw new Error(`Could not look up the recipe: ${error.message}`);
