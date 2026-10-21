@@ -15,7 +15,7 @@ import {
 import { addIngredient, UNITS } from './ingredients.js';
 import { repairNutrition, describeOutcome } from './repair.js';
 import { setRecipeImage } from './recipe-image.js';
-import { planMeal, SLOTS } from './plan.js';
+import { planMeal, getWeekPlan, formatWeekPlan, SLOTS } from './plan.js';
 
 /**
  * A tool failure has to come back as a result with isError, not a thrown
@@ -61,7 +61,7 @@ function createWriteQueue() {
  *   readable tool error instead of preventing the server from starting at all.
  */
 export function createServer({ getClient, lookup, fetchImpl, readFileImpl }) {
-    const server = new McpServer({ name: 'meal-planner', version: '0.11.0' });
+    const server = new McpServer({ name: 'meal-planner', version: '0.12.0' });
     const serialize = createWriteQueue();
 
     server.registerTool(
@@ -291,6 +291,31 @@ export function createServer({ getClient, lookup, fetchImpl, readFileImpl }) {
                 return result.ok
                     ? { content: [{ type: 'text', text: result.message }] }
                     : toolError(result.message);
+            } catch (error) {
+                return toolError(error.message);
+            }
+        }
+    );
+
+    server.registerTool(
+        'get_week_plan',
+        {
+            title: "Get a week's meal plan",
+            description:
+                "Read what's already planned for a week: for each of the 7 days starting from the given date, which recipe (if any) fills the main, side and veg slots. A slot with nothing planned is reported as empty. Use this before filling in or changing a week so days that already have something are not overwritten.",
+            inputSchema: {
+                start_day: z
+                    .string()
+                    .regex(/^\d{4}-\d{2}-\d{2}$/)
+                    .describe('The Sunday that starts the week, as YYYY-MM-DD — the same week model the app itself uses. The other 6 days are read from there.')
+            },
+            annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false }
+        },
+        async ({ start_day }) => {
+            try {
+                const weekPlan = await getWeekPlan(await getClient(), { startDay: start_day });
+
+                return { content: [{ type: 'text', text: formatWeekPlan(weekPlan) }] };
             } catch (error) {
                 return toolError(error.message);
             }

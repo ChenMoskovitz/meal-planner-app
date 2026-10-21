@@ -85,7 +85,8 @@ describe('the real executable', () => {
             names,
             [
                 'add_ingredient', 'add_recipe', 'add_recipe_description', 'add_recipe_image',
-                'get_recipe', 'list_recipes', 'ping', 'plan_meal', 'repair_nutrition', 'update_recipe'
+                'get_recipe', 'get_week_plan', 'list_recipes', 'ping', 'plan_meal', 'repair_nutrition',
+                'update_recipe'
             ]
         );
     });
@@ -127,6 +128,7 @@ describe('the real executable', () => {
         ping: true,
         list_recipes: true,
         get_recipe: true,
+        get_week_plan: true,
         add_recipe: false,
         add_recipe_description: false,
         add_recipe_image: false,
@@ -445,6 +447,30 @@ describe('with a fake database', () => {
 
         assert.equal(result.isError, true);
         assert.match(result.content[0].text, /list_recipes/);
+        await mcp.close();
+    });
+
+    test('reads back a week\'s plan, naming empty slots', async () => {
+        const database = fakeSupabase({
+            recipes: [{ id: 'soup', name: 'Chicken soup', type: 'main_dish', base_servings: 4 }],
+            plan_recipes: [{ id: 'a', day_of_week: '2026-10-19', slot_type: 'main', recipe_id: 'soup' }]
+        });
+        const mcp = await connectWithDatabase(database);
+
+        const result = await mcp.callTool({ name: 'get_week_plan', arguments: { start_day: '2026-10-18' } });
+
+        assert.notEqual(result.isError, true);
+        assert.match(result.content[0].text, /2026-10-19 \(Mon\): main: Chicken soup, side: empty, veg: empty/);
+        assert.match(result.content[0].text, /2026-10-18 \(Sun\): main: empty, side: empty, veg: empty/);
+        await mcp.close();
+    });
+
+    test('rejects a start_day that is not YYYY-MM-DD', async () => {
+        const mcp = await connectWithDatabase(fakeSupabase({ recipes: RECIPES }));
+
+        const result = await mcp.callTool({ name: 'get_week_plan', arguments: { start_day: '10/18/2026' } });
+
+        assert.equal(result.isError, true);
         await mcp.close();
     });
 

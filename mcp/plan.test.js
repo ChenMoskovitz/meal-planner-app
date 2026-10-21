@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { planMeal } from './plan.js';
+import { planMeal, getWeekPlan, formatWeekPlan } from './plan.js';
 import { fakeSupabase } from './fake-supabase.js';
 
 const RECIPES = [
@@ -105,6 +105,93 @@ describe('planMeal', () => {
         await assert.rejects(
             () => planMeal(db, { day: '2026-10-19', slot: 'main', recipe: 'Chicken soup' }),
             /JWT expired/
+        );
+    });
+});
+
+describe('getWeekPlan', () => {
+    test('returns all 7 days from startDay, with their weekday labels', async () => {
+        const db = database();
+
+        const week = await getWeekPlan(db, { startDay: '2026-10-18' });
+
+        assert.deepEqual(
+            week.map(d => d.day),
+            ['2026-10-18', '2026-10-19', '2026-10-20', '2026-10-21', '2026-10-22', '2026-10-23', '2026-10-24']
+        );
+        assert.deepEqual(
+            week.map(d => d.weekday),
+            ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+        );
+    });
+
+    test('reports every slot as empty when nothing is planned', async () => {
+        const db = database();
+
+        const week = await getWeekPlan(db, { startDay: '2026-10-18' });
+
+        for (const { slots } of week) {
+            assert.deepEqual(slots, { main: null, side: null, veg: null });
+        }
+    });
+
+    test('fills in planned slots by recipe name, leaving the rest empty', async () => {
+        const db = database({
+            plan_recipes: [
+                { id: 'a', day_of_week: '2026-10-19', slot_type: 'main', recipe_id: 'soup' },
+                { id: 'b', day_of_week: '2026-10-19', slot_type: 'veg', recipe_id: 'broc' }
+            ]
+        });
+
+        const week = await getWeekPlan(db, { startDay: '2026-10-18' });
+        const monday = week.find(d => d.day === '2026-10-19');
+
+        assert.deepEqual(monday.slots, { main: 'Chicken soup', side: null, veg: 'Broccoli' });
+    });
+
+    test('ignores plan rows outside the 7-day window', async () => {
+        const db = database({
+            plan_recipes: [{ id: 'a', day_of_week: '2026-10-25', slot_type: 'main', recipe_id: 'soup' }]
+        });
+
+        const week = await getWeekPlan(db, { startDay: '2026-10-18' });
+
+        for (const { slots } of week) {
+            assert.deepEqual(slots, { main: null, side: null, veg: null });
+        }
+    });
+
+    test('reports an orphaned plan row as an unknown recipe rather than dropping it', async () => {
+        const db = database({
+            plan_recipes: [{ id: 'a', day_of_week: '2026-10-19', slot_type: 'main', recipe_id: 'gone' }]
+        });
+
+        const week = await getWeekPlan(db, { startDay: '2026-10-18' });
+        const monday = week.find(d => d.day === '2026-10-19');
+
+        assert.equal(monday.slots.main, 'unknown recipe');
+    });
+
+    test('throws when the database reports an error', async () => {
+        const db = database({ error: { message: 'JWT expired' } });
+
+        await assert.rejects(() => getWeekPlan(db, { startDay: '2026-10-18' }), /JWT expired/);
+    });
+});
+
+describe('formatWeekPlan', () => {
+    test('renders one line per day, naming empty slots', () => {
+        const week = [
+            {
+                day: '2026-10-18',
+                weekday: 'Sun',
+                slots: { main: 'Chicken soup', side: null, veg: 'Broccoli' }
+            }
+        ];
+
+        assert.equal(
+            formatWeekPlan(week),
+            '2026-10-18 (Sun): main: Chicken soup, side: empty, veg: Broccoli'
         );
     });
 });
