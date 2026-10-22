@@ -11,7 +11,7 @@ function Pantry() {
     const [ingredients, setIngredients] = useState([]);
     const [unitType, setUnitType] = useState('g');
     const [isVisible, setIsVisible] = useState(true);
-    const { showSuccess } = useToast();
+    const { showSuccess, showError } = useToast();
 
     useEffect(() => {
         fetchIngredients();
@@ -74,7 +74,11 @@ function Pantry() {
                 const perUnit = formatIngredientNutrition(apiNutrients);
                 showSuccess(`Updated! 1${unitType} of ${item.name} is ${perUnit.calories.toFixed(4)} kcal.`);
                 fetchIngredients();
+            } else {
+                showError(`Could not save the nutrition data for "${item.name}": ${error.message}`);
             }
+        } else {
+            showError(`Could not find nutrition info for "${item.name}".`);
         }
     };
 
