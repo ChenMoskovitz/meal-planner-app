@@ -1,5 +1,3 @@
-// apiTest.js
-
 const fetchNutrition = async (ingredientName) => {
     // The same food-database credentials IngredientSearch uses. This read
     // VITE_EDAMAM_APP_ID/KEY, which were never set anywhere but CI, so the
@@ -14,13 +12,7 @@ const fetchNutrition = async (ingredientName) => {
         const data = await response.json();
 
         // Pick the first food result found
-        const firstResult = data.hints[0]?.food;
-
-        if (firstResult) {
-            console.log(`Nutritional info for ${ingredientName}:`, firstResult.nutrients);
-        }
-
-        return firstResult;
+        return data.hints[0]?.food;
     } catch (error) {
         console.error("Fetch failed:", error);
     }

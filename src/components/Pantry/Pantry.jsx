@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../config/supabaseClient.js';
-import fetchNutrition from '../../utils/apiTest.js';
+import fetchNutrition from '../../utils/edamamNutrition.js';
 import { formatIngredientNutrition } from '../../utils/nutritionHelper.js';
 import IngredientSearch from "../IngredientSearch.jsx";
 import { useToast } from '../common/ToastProvider.jsx';
