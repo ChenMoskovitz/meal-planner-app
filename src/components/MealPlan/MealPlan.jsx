@@ -275,7 +275,11 @@ function MealPlan() {
                     is_bought: false,
                     created_at: new Date(weekDates[1]).toISOString()
                 }]);
-        if (!error) fetchPermanentList();
+        if (!error) {
+            fetchPermanentList();
+        } else {
+            showError(`Could not add "${itemName}" to the shopping list: ${error.message}`);
+        }
     }
 
     async function toggleBought(id, currentStatus) {

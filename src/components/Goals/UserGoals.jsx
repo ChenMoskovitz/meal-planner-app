@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../config/supabaseClient.js';
+import { useToast } from '../common/ToastProvider.jsx';
 
 function UserGoals() {
+    const { showError } = useToast();
     const [goals, setGoals] = useState({
         target_calories: 2000,
         min_protein: 100,
@@ -69,6 +71,7 @@ function UserGoals() {
             );
         if (error) {
             console.error("Error saving goals:", error);
+            showError(`Could not save your targets: ${error.message}`);
         }
         if (!error) {
             setMessage('Goals updated successfully.');

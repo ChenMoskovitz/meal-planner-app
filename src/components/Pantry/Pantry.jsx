@@ -43,6 +43,8 @@ function Pantry() {
             setName('');
             setQuantity(1);
             fetchIngredients();
+        } else {
+            showError(`Could not save "${name}": ${error.message}`);
         }
     }
 
