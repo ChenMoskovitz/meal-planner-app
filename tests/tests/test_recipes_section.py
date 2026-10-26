@@ -20,8 +20,9 @@ def test_create_recipe(page: Page, visit):
     # Create recipe
     page.get_by_role("button", name="Create Recipe").click()
 
-    # Verify the recipe appears
-    expect(page.get_by_text(recipe_name)).to_be_visible()
+    # Verify the recipe appears. Generous timeout: this follows a Supabase
+    # insert, and the default 5s window has occasionally been too tight.
+    expect(page.get_by_text(recipe_name)).to_be_visible(timeout=15_000)
 
 def test_select_recipe(page: Page, visit):
     visit("/recipes")
@@ -32,8 +33,9 @@ def test_select_recipe(page: Page, visit):
     page.get_by_placeholder("Recipe Title (e.g. Pasta)").fill(recipe_name)
     page.get_by_role("button", name="Create Recipe").click()
 
-    # Click the recipe from the list
-    page.get_by_text(recipe_name).click()
+    # Click the recipe from the list. Generous timeout: this follows a
+    # Supabase insert, and the default 5s window has occasionally been too tight.
+    page.get_by_text(recipe_name).click(timeout=15_000)
 
     # Verify the empty-state message disappears
     expect(page.get_by_text("Select a recipe to start cooking")).not_to_be_visible()
@@ -41,7 +43,7 @@ def test_select_recipe(page: Page, visit):
     # Verify the selected recipe is shown
     expect(
         page.get_by_role("heading", name=recipe_name)
-    ).to_be_visible()
+    ).to_be_visible(timeout=15_000)
 
 def test_add_cooking_instructions(page: Page, visit):
     visit("/recipes")
