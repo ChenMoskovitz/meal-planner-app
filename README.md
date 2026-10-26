@@ -28,7 +28,7 @@ Colour, type and spacing are defined as design tokens in `@theme` (`src/index.cs
 
 ## How it's tested
 
-Three suites, each covering what the others can't, all gating every pull request:
+Three suites, each covering what the others can't, all gating every pull request — and all run again nightly on a schedule, so a dependency update or an external API change gets caught before a push does:
 
 | Suite | Count | Tool | What it covers |
 |---|---|---|---|
@@ -41,6 +41,8 @@ Two deliberate choices in there:
 **Accessibility is a build gate, not a checklist.** `tests/tests/test_accessibility.py` runs axe-core against every route and fails CI on any WCAG 2.1 A/AA violation. When it was added it immediately caught 38 labels at 2.5:1 contrast where AA needs 4.5:1, two form fields whose visible `<label>` was never associated with its input, and seven identical unnamed `<select>` elements.
 
 **The E2E suite signs in once.** It used to drive the login form in every test, which tripped Supabase's auth rate limit; now one session is captured and replayed, and the shared test account is cleaned at the *start* of each run so a crashed run is repaired by the next one rather than poisoning it.
+
+**The nightly run isn't just a tripwire.** Besides catching drift between pushes, it exercises the real Supabase project daily, which keeps it from auto-pausing on the free tier when the repo goes quiet for a while.
 
 ## Running it
 

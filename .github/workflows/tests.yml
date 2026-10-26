@@ -5,6 +5,10 @@ on:
     branches: [main]
   push:
     branches: [main]
+  # Catches drift between pushes (dependency updates, API changes) and keeps
+  # the Supabase project active so it doesn't auto-pause from inactivity.
+  schedule:
+    - cron: "0 7 * * *"
 
 # One shared Supabase test account, so runs must not overlap.
 concurrency:
