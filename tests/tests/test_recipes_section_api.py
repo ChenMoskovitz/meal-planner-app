@@ -1,6 +1,8 @@
 def test_create_recipe_api(authenticated_api_user):
     user = authenticated_api_user
 
+    # Generous timeout: Playwright's APIRequestContext default (30s) has
+    # occasionally been too tight for this POST to Supabase's REST API.
     response = user["request"].post(
         f'{user["supabase_url"]}/rest/v1/recipes',
         headers={
@@ -10,7 +12,8 @@ def test_create_recipe_api(authenticated_api_user):
         data={
             "name": "API Test Recipe",
             "user_id": user["user_id"]
-        }
+        },
+        timeout=60_000
     )
 
     assert response.ok
@@ -25,7 +28,8 @@ def test_create_recipe_api(authenticated_api_user):
 def test_get_user_recipes_api(authenticated_api_user):
     user = authenticated_api_user
 
-    # Create one recipe first
+    # Create one recipe first. Same generous timeout as test_create_recipe_api,
+    # for the same reason.
     create_response = user["request"].post(
         f'{user["supabase_url"]}/rest/v1/recipes',
         headers={
@@ -35,7 +39,8 @@ def test_get_user_recipes_api(authenticated_api_user):
         data={
             "name": "API Test Recipe",
             "user_id": user["user_id"]
-        }
+        },
+        timeout=60_000
     )
 
     assert create_response.ok
