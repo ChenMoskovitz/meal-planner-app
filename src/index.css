@@ -120,3 +120,12 @@
 .slide-in-from-top-2 { --enter-translate-y: -0.5rem; }
 .slide-in-from-bottom-4 { --enter-translate-y: 1rem; }
 .slide-in-from-right-4 { --enter-translate-x: 1rem; }
+
+/* Content must be immediately readable for anyone who asked their OS not to
+   animate things, so this isn't just a CI workaround: see also the
+   reduced_motion browser context in tests/conftest.py. */
+@media (prefers-reduced-motion: reduce) {
+    .animate-in {
+        animation: none;
+    }
+}
