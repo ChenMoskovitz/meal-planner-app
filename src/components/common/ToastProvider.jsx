@@ -55,7 +55,7 @@ export function ToastProvider({ children }) {
                     <div
                         key={toast.id}
                         role="status"
-                        className={`pointer-events-auto flex items-start justify-between gap-3 px-4 py-3 rounded-xl text-xs font-bold shadow-lg border ${
+                        className={`pointer-events-auto flex items-start justify-between gap-3 px-4 py-3 rounded-xl text-xs font-bold shadow-lg border animate-in fade-in slide-in-from-right-4 duration-300 ${
                             toast.kind === 'success'
                                 ? 'bg-good-soft text-good-dark border-good-soft'
                                 : 'bg-bad-soft text-bad-dark border-bad-soft'

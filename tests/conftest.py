@@ -8,6 +8,17 @@ load_dotenv()
 
 BASE_URL = "http://localhost:5173"
 
+
+@pytest.fixture
+def browser_context_args(browser_context_args):
+    """Request no-motion, so CSS entrance animations don't run.
+
+    Without this, axe can scan a page mid fade-in and flag text at its
+    starting opacity as a color-contrast violation, even though a real user
+    sees it reach full contrast within the animation's duration.
+    """
+    return {**browser_context_args, "reduced_motion": "reduce"}
+
 # Everything the shared account accumulates, in delete order.
 # recipe_ingredients is missing on purpose: deleting a recipe cascades to it.
 OWNED_TABLES = ["plan_recipes", "shopping_list", "recipes", "user_goals"]

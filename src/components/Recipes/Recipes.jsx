@@ -751,8 +751,10 @@ function Recipes() {
                                     </div>
                                 </div>
                             ) : (
-                                <div className="h-full flex flex-col items-center justify-center border-2 border-dashed border-line rounded-2xl p-12 text-center">
-                                                                        <h3 className="text-lg font-bold text-stone-600">Select a recipe to start cooking</h3>
+                                <div className="h-full flex flex-col items-center justify-center gap-2 border-2 border-dashed border-line rounded-2xl p-12 text-center animate-in fade-in duration-500">
+                                    <span className="text-4xl" aria-hidden="true">🍽️</span>
+                                    <h3 className="text-lg font-bold text-stone-600">Select a recipe to start cooking</h3>
+                                    <p className="text-sm text-stone-500">Pick one from the list on the left, or create a new one above.</p>
                                 </div>
                             )}
                         </div>
