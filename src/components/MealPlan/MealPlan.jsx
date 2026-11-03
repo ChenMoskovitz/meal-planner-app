@@ -597,9 +597,10 @@ function MealPlan() {
 
                         <div className="space-y-3">
                             {permanentList.length === 0 ? (
-                                <p className="text-stone-600 text-xs font-medium py-12 text-center border-2 border-dashed border-line rounded-2xl">
-                                    Your list is empty. Add items from the left!
-                                </p>
+                                <div className="flex flex-col items-center gap-2 py-12 text-center border-2 border-dashed border-line rounded-2xl animate-in fade-in duration-500">
+                                    <span className="text-3xl" aria-hidden="true">🛒</span>
+                                    <p className="text-stone-600 text-xs font-medium">Your list is empty. Add items from the left!</p>
+                                </div>
                             ) : (
                                 permanentList.map((item) => (
                                     <div
