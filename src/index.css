@@ -14,27 +14,44 @@
  */
 @theme {
     --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
-    --font-display: "Bricolage Grotesque", "Inter", ui-sans-serif, sans-serif;
+    /* Fraunces carries the "Editorial Kitchen" half of the direction: recipe
+       names and section headings get a serif a food magazine would use. */
+    --font-display: "Fraunces", "Inter", ui-serif, Georgia, serif;
+    /* Manrope is the "Fresh & Minimal" half — a rounder geometric sans used
+       only for buttons and nav chrome, so UI controls read as a distinct,
+       functional layer under the editorial headings. */
+    --font-ui: "Manrope", "Inter", ui-sans-serif, system-ui, sans-serif;
 
-    /* Warm neutrals: a food app should not be lit like a spreadsheet. */
-    --color-surface: #fdfcfa;
+    /* Warm cream rather than the previous white-ish surface — the base of
+       "Fresh Editorial": airy, not clinical. */
+    --color-surface: #faf7f0;
     --color-card: #ffffff;
-    --color-line: #ebe5dd;
+    --color-line: #eae3d4;
 
-    --color-accent: #c2410c;
-    --color-accent-dark: #9a3412;
-    --color-accent-soft: #fff7ed;
-    --color-accent-line: #ffedd5;
+    /* Sage/forest replaces terracotta as the primary accent. */
+    --color-accent: #336b50;
+    --color-accent-dark: #234a37;
+    --color-accent-soft: #e7efe6;
+    --color-accent-line: #cee0d1;
 
-    /* Goal met / falling short / destructive. Kept distinct from the accent so a
-       terracotta button never reads as a status. */
-    --color-good: #15803d;
-    --color-good-dark: #166534;
-    --color-good-soft: #f0fdf4;
-    --color-warn: #d97706;
-    --color-bad: #b91c1c;
-    --color-bad-dark: #991b1b;
-    --color-bad-soft: #fef2f2;
+    /* Secondary accent, used sparingly (e.g. the "Leftovers" badge) so the
+       app doesn't drift back into a five-color palette. -dark is the text
+       color on top of -soft; the base clay value fails 4.5:1 as text on its
+       own, so it's left for swatches/decoration only. */
+    --color-clay: #c97b4a;
+    --color-clay-dark: #a8603a;
+    --color-clay-soft: rgba(201, 123, 74, 0.14);
+
+    /* Goal met / falling short / destructive. Kept distinct from the accent so
+       a sage button never reads as a status — this matters more now than it
+       did with terracotta, since "good" is also green. */
+    --color-good: #257a48;
+    --color-good-dark: #1b5e36;
+    --color-good-soft: #e8f5ec;
+    --color-warn: #b5790a;
+    --color-bad: #bc4a3c;
+    --color-bad-dark: #96382d;
+    --color-bad-soft: #fbeae7;
 }
 
 @layer base {
@@ -44,11 +61,20 @@
         font-family: var(--font-sans);
     }
 
-    /* Bricolage Grotesque has a wider, slightly quirky shape that separates a
-       heading from body text without needing a heavier weight. */
-    h1, h2, h3, h4 {
+    /* Fraunces on headings only — h4 is excluded because the app's only two
+       uses of h3/h4 for tiny uppercase tracked labels ("Recipe List", "Meal
+       Combo Totals") read poorly as serif at that size; the h3 case is
+       opted back out to font-sans at its call site. */
+    h1, h2, h3 {
         font-family: var(--font-display);
-        letter-spacing: -0.02em;
+        letter-spacing: -0.01em;
+    }
+
+    /* The UI/nav layer: every button gets the rounder Manrope face so
+       controls read as a distinct layer from the editorial headings above
+       them, without having to touch every component's className. */
+    button {
+        font-family: var(--font-ui);
     }
 }
 
