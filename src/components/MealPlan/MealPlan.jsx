@@ -552,7 +552,7 @@ function MealPlan() {
                 {/* Header Row */}
                 <div className="mb-8 text-center md:text-left">
                     <h3 className="text-2xl font-black text-stone-900 tracking-tight">Shopping Manager</h3>
-                    <p className="text-stone-500 font-medium">Review your week and build your final grocery list</p>
+                    <p className="text-stone-600 font-medium">Review your week and build your final grocery list</p>
                 </div>
 
                 <div className="flex flex-col md:flex-row gap-8 items-start">
