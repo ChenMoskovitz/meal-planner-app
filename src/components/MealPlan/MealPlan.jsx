@@ -389,14 +389,14 @@ function MealPlan() {
                             {dayPlan && dayPlan.main ? (
                                 <div className="space-y-3">
                                     <div className="p-3 bg-white rounded-xl border border-line shadow-sm">
-                                        <div className="text-sm font-bold text-stone-800 leading-tight mb-1">{dayPlan.main?.name}</div>
+                                        <div className="font-display text-sm font-bold text-stone-800 leading-tight mb-1">{dayPlan.main?.name}</div>
 
                                         {/* Leftovers Logic */}
                                         {(() => {
                                             const base = dayPlan.main.base_servings || 1;
                                             const leftovers = base - globalPlannedServings;
                                             return leftovers > 0 ? (
-                                                <span className="inline-block bg-stone-200 text-stone-700 text-[10px] font-bold px-2 py-0.5 rounded-lg mt-1">
+                                                <span className="inline-block bg-clay-soft text-clay-dark text-[10px] font-bold px-2 py-0.5 rounded-lg mt-1">
                                                     +{leftovers} Leftovers
                                                 </span>
                                             ) : null;
@@ -552,7 +552,7 @@ function MealPlan() {
                 {/* Header Row */}
                 <div className="mb-8 text-center md:text-left">
                     <h3 className="text-2xl font-black text-stone-900 tracking-tight">Shopping Manager</h3>
-                    <p className="text-stone-500 font-medium">Review your week and build your final grocery list</p>
+                    <p className="text-stone-600 font-medium">Review your week and build your final grocery list</p>
                 </div>
 
                 <div className="flex flex-col md:flex-row gap-8 items-start">

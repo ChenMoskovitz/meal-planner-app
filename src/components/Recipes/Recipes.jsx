@@ -502,7 +502,7 @@ function Recipes() {
                     <div className="flex flex-col lg:flex-row gap-8">
                         {/* List Column */}
                         <div className="lg:w-1/3">
-                            <h3 className="text-[10px] font-black uppercase tracking-widest text-stone-600 mb-4">Recipe List</h3>
+                            <h3 className="font-sans text-[10px] font-black uppercase tracking-widest text-stone-600 mb-4">Recipe List</h3>
                             <ul className="space-y-2 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                                 {recipes.map(recipe => (
                                     <li key={recipe.id}
@@ -550,14 +550,14 @@ function Recipes() {
 
                                     {/* Nutrition Box */}
                                     {selectedNutrition && (
-                                        <div className="mb-6 p-5 bg-stone-900 text-white rounded-xl relative shadow-lg animate-in zoom-in-95">
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <p className="text-lg font-bold"><strong>{selectedNutrition.calories.toFixed(0)}</strong> <span className="text-xs font-normal">kcal</span></p>
-                                                <p className="text-lg font-bold"><strong>{selectedNutrition.protein.toFixed(1)}</strong> <span className="text-xs font-normal">g Protein</span></p>
-                                                <p className="text-lg font-bold"><strong>{selectedNutrition.fat.toFixed(1)}</strong> <span className="text-xs font-normal">g Fat</span></p>
-                                                <p className="text-lg font-bold"><strong>{selectedNutrition.fiber.toFixed(1)}</strong> <span className="text-xs font-normal">g Fiber</span></p>
+                                        <div className="mb-6 p-5 bg-accent-soft border border-accent-line rounded-xl relative shadow-sm animate-in zoom-in-95">
+                                            <div className="grid grid-cols-2 gap-4 font-display text-stone-900">
+                                                <p className="text-lg font-bold"><strong>{selectedNutrition.calories.toFixed(0)}</strong> <span className="font-sans text-xs font-normal text-stone-600">kcal</span></p>
+                                                <p className="text-lg font-bold"><strong>{selectedNutrition.protein.toFixed(1)}</strong> <span className="font-sans text-xs font-normal text-stone-600">g Protein</span></p>
+                                                <p className="text-lg font-bold"><strong>{selectedNutrition.fat.toFixed(1)}</strong> <span className="font-sans text-xs font-normal text-stone-600">g Fat</span></p>
+                                                <p className="text-lg font-bold"><strong>{selectedNutrition.fiber.toFixed(1)}</strong> <span className="font-sans text-xs font-normal text-stone-600">g Fiber</span></p>
                                             </div>
-                                            <button className="absolute top-4 right-4 text-xs opacity-50 hover:opacity-100" onClick={() => setSelectedNutrition(null)}>✕</button>
+                                            <button className="absolute top-4 right-4 text-xs text-stone-500 hover:text-bad transition-colors" onClick={() => setSelectedNutrition(null)}>✕</button>
                                         </div>
                                     )}
 

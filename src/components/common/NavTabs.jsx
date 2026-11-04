@@ -32,7 +32,7 @@ export default function NavTabs() {
                         key={path}
                         to={path}
                         className={({ isActive }) =>
-                            `shrink-0 px-4 py-3 text-xs font-bold tracking-wide border-b-2 -mb-px transition-all ${
+                            `font-ui shrink-0 px-4 py-3 text-xs font-bold tracking-wide border-b-2 -mb-px transition-all ${
                                 isActive
                                     ? 'border-accent text-accent-dark'
                                     : 'border-transparent text-stone-500 hover:text-stone-900 hover:border-line'

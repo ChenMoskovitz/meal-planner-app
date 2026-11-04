@@ -164,24 +164,24 @@ function Meals() {
 
                     {/* The Nutrition Card */}
                     {showNutrition && (
-                        <div className="mt-4 p-5 bg-stone-900 text-white rounded-xl animate-in zoom-in-95 duration-200">
-                            <h4 className="text-xs font-black uppercase tracking-widest text-stone-600 mb-3">Meal Combo Totals</h4>
+                        <div className="mt-4 p-5 bg-accent-soft border border-accent-line rounded-xl animate-in zoom-in-95 duration-200">
+                            <h4 className="font-sans text-xs font-black uppercase tracking-widest text-accent-dark mb-3">Meal Combo Totals</h4>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="flex flex-col">
-                                    <span className="text-[10px] text-stone-300 uppercase font-bold">Calories</span>
-                                    <span className="text-lg font-bold">{comboNutrition.calories.toFixed(0)}</span>
+                                    <span className="text-[10px] text-stone-600 uppercase font-bold">Calories</span>
+                                    <span className="font-display text-lg font-bold text-stone-900">{comboNutrition.calories.toFixed(0)}</span>
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className="text-[10px] text-stone-300 uppercase font-bold">Protein</span>
-                                    <span className="text-lg font-bold">{comboNutrition.protein.toFixed(1)}g</span>
+                                    <span className="text-[10px] text-stone-600 uppercase font-bold">Protein</span>
+                                    <span className="font-display text-lg font-bold text-stone-900">{comboNutrition.protein.toFixed(1)}g</span>
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className="text-[10px] text-stone-300 uppercase font-bold">Fat</span>
-                                    <span className="text-lg font-bold">{comboNutrition.fat.toFixed(1)}g</span>
+                                    <span className="text-[10px] text-stone-600 uppercase font-bold">Fat</span>
+                                    <span className="font-display text-lg font-bold text-stone-900">{comboNutrition.fat.toFixed(1)}g</span>
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className="text-[10px] text-stone-300 uppercase font-bold">Fiber</span>
-                                    <span className="text-lg font-bold">{comboNutrition.fiber.toFixed(1)}g</span>
+                                    <span className="text-[10px] text-stone-600 uppercase font-bold">Fiber</span>
+                                    <span className="font-display text-lg font-bold text-stone-900">{comboNutrition.fiber.toFixed(1)}g</span>
                                 </div>
                             </div>
                         </div>
