@@ -54,7 +54,6 @@ function Meals() {
         }
     }
 
-    // Change the name here to match what the button uses, or vice versa
     async function pickRandomMeal() {
         setLoading(true);
         setSideSuggestion(null);
