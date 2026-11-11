@@ -9,7 +9,7 @@ Try it without signing up — a demo household, already planned for the week:
 > **Email:** `demo@mealplanner.app`
 > **Password:** `MealPlannerDemo2026!`
 
-It's a real account like any other, seeded with its own recipes, pantry and week — isolated from every other account by the same row-level security that backs the rest of the app, not by special-casing the demo.
+It's a real account like any other, seeded with its own recipes, pantry and week — isolated from every other account by the same row-level security that backs the rest of the app, not by special-casing the demo. The credentials are public, so anything in it is fair game to edit; a [scheduled job](.github/workflows/reset-demo.yml) wipes and reseeds it daily, which also rolls the plan over to the new week every Sunday.
 
 ![The weekly plan: seven day cards with their meals, a leftovers badge, and the shopping manager below](docs/screenshot.png)
 
