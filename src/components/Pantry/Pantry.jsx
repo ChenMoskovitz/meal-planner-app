@@ -37,7 +37,7 @@ function Pantry() {
             name,
             stock_quantity: finalQuantity,
             unit_type: unitType
-        }, { onConflict: 'name' });
+        }, { onConflict: 'user_id,name' });
 
         if (!error) {
             setName('');
