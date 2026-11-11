@@ -4,6 +4,13 @@ A weekly dinner planner that turns a plan into a shopping list. Pick recipes for
 
 **[Live app](https://meal-planner-app-ruby-ten.vercel.app)** · React + Supabase · 260 automated tests
 
+Try it without signing up — a demo household, already planned for the week:
+
+> **Email:** `demo@mealplanner.app`
+> **Password:** `MealPlannerDemo2026!`
+
+It's a real account like any other, seeded with its own recipes, pantry and week — isolated from every other account by the same row-level security that backs the rest of the app, not by special-casing the demo.
+
 ![The weekly plan: seven day cards with their meals, a leftovers badge, and the shopping manager below](docs/screenshot.png)
 
 ## What it does
