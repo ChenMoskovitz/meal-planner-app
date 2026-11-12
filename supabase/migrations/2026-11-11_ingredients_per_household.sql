@@ -39,11 +39,13 @@ drop policy if exists "ingredients_delete_own" on public.ingredients;
 create policy "ingredients_delete_own" on public.ingredients
     for delete using (auth.uid() = user_id);
 
--- 4. The actual fix: swap the global unique constraint on `name` for one
--- scoped to (user_id, name). If this DROP fails because the constraint has a
--- different name on your project, find it first with:
+-- 4. The actual fix: drop the global unique constraint on `name` now that
+-- ingredients_user_id_name_key (user_id, name) exists alongside it. The old
+-- constraint's actual name on this project is `unique_ingredient_name`;
+-- ingredients_name_key is dropped too in case another environment named it
+-- the default way. To check a given project directly:
 --   select conname from pg_constraint
 --   where conrelid = 'public.ingredients'::regclass and contype = 'u';
+alter table public.ingredients drop constraint if exists unique_ingredient_name;
 alter table public.ingredients drop constraint if exists ingredients_name_key;
-alter table public.ingredients
-    add constraint ingredients_user_id_name_key unique (user_id, name);
+-- ingredients_user_id_name_key (user_id, name) already exists at this point.
