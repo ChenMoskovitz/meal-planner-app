@@ -124,6 +124,7 @@ function MealPlan() {
             if (recipe) {
                 if (!loadedPlan[day]) loadedPlan[day] = {};
                 loadedPlan[day][row.slot_type] = recipe;
+                if (row.slot_type === 'main') loadedPlan[day].mainIsLeftover = row.is_leftover;
             }
         });
         // Browsing to another week re-runs this, so a plain merge would pile every
@@ -166,13 +167,39 @@ function MealPlan() {
         }
     }
 
+    // Copies today's main into tomorrow's main slot, flagged so the day card
+    // shows it as a leftover instead of a fresh cook and the shopping list
+    // doesn't buy it a second time. Only within the loaded week — the last day
+    // has no visible "tomorrow" to write into.
+    async function useLeftoversForNextDay(day) {
+        const idx = weekDates.indexOf(day);
+        const nextDay = weekDates[idx + 1];
+        const dayPlan = plan[day];
+        if (!nextDay || !dayPlan?.main) return;
+
+        if (plan[nextDay]?.main) {
+            const confirmed = await confirm({
+                title: 'Replace tomorrow\'s main?',
+                message: `${plan[nextDay].main.name} is already planned for tomorrow. Replace it with leftover ${dayPlan.main.name}?`,
+                confirmLabel: 'Replace',
+                destructive: true
+            });
+            if (!confirmed) return;
+        }
+
+        setPlan(prev => ({
+            ...prev,
+            [nextDay]: { ...prev[nextDay], main: dayPlan.main, mainIsLeftover: true }
+        }));
+    }
+
     async function saveWeeklyPlan() {
         try {
             const rowsToInsert = [];
             for (const day of weekDates) {
                 const dayData = plan[day];
                 if (!dayData) continue;
-                if (dayData.main) rowsToInsert.push({ day_of_week: day, recipe_id: dayData.main.id, slot_type: 'main', planned_servings: globalPlannedServings });
+                if (dayData.main) rowsToInsert.push({ day_of_week: day, recipe_id: dayData.main.id, slot_type: 'main', planned_servings: globalPlannedServings, is_leftover: !!dayData.mainIsLeftover });
                 if (dayData.side) rowsToInsert.push({ day_of_week: day, recipe_id: dayData.side.id, slot_type: 'side', planned_servings: globalPlannedServings });
                 if (dayData.veg) rowsToInsert.push({ day_of_week: day, recipe_id: dayData.veg.id, slot_type: 'veg', planned_servings: globalPlannedServings });
             }
@@ -224,9 +251,11 @@ function MealPlan() {
         };
 
         // Only the week on screen: `plan` can still hold days outside it.
+        // A leftover main isn't a new purchase — it was already bought for the
+        // day it's leftover from — so it's excluded here, not just scaled down.
         weekDates.forEach(dateStr => {
             const day = plan[dateStr];
-            addSlot(day?.main);
+            if (!day?.mainIsLeftover) addSlot(day?.main);
             addSlot(day?.side);
             addSlot(day?.veg);
         });
@@ -392,14 +421,30 @@ function MealPlan() {
                                         <div className="font-display text-sm font-bold text-stone-800 leading-tight mb-1">{dayPlan.main?.name}</div>
 
                                         {/* Leftovers Logic */}
-                                        {(() => {
+                                        {dayPlan.mainIsLeftover ? (
+                                            <span className="inline-block bg-clay-soft text-clay-dark text-[10px] font-bold px-2 py-0.5 rounded-lg mt-1">
+                                                Leftover
+                                            </span>
+                                        ) : (() => {
                                             const base = dayPlan.main.base_servings || 1;
                                             const leftovers = base - globalPlannedServings;
-                                            return leftovers > 0 ? (
-                                                <span className="inline-block bg-clay-soft text-clay-dark text-[10px] font-bold px-2 py-0.5 rounded-lg mt-1">
-                                                    +{leftovers} Leftovers
-                                                </span>
-                                            ) : null;
+                                            if (leftovers <= 0) return null;
+                                            const hasNextDay = weekDates.indexOf(dateStr) < weekDates.length - 1;
+                                            return (
+                                                <div className="flex flex-wrap items-center gap-1 mt-1">
+                                                    <span className="inline-block bg-clay-soft text-clay-dark text-[10px] font-bold px-2 py-0.5 rounded-lg">
+                                                        +{leftovers} Leftovers
+                                                    </span>
+                                                    {hasNextDay && (
+                                                        <button
+                                                            className="text-[9px] font-bold px-2 py-0.5 bg-stone-50 text-stone-600 hover:bg-good-soft hover:text-good rounded-lg transition-colors"
+                                                            onClick={() => useLeftoversForNextDay(dateStr)}
+                                                        >
+                                                            Use for tomorrow →
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            );
                                         })()}
 
                                         {dayPlan.side && <div className="text-[11px] text-stone-600 mt-2 truncate"><span className="text-stone-600">Side</span> {dayPlan.side.name}</div>}
