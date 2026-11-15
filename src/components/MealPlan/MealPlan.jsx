@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../config/supabaseClient.js';
 import { getMultiRecipeNutrition } from '../../utils/nutritionHelper.js';
 import { batchesFor, sumWeeklyIngredients, roundAmount } from '../../utils/shoppingList.js';
@@ -25,6 +25,7 @@ function MealPlan() {
     const [nutritionalGoals, setNutritionalGoals] = useState(null);
     const { showSuccess, showError } = useToast();
     const confirm = useConfirm();
+    const scrollContainerRef = useRef(null);
 
     // --- 3. Effects ---
     useEffect(() => {
@@ -59,6 +60,17 @@ function MealPlan() {
             fetchPermanentList();
         }
     }, [weekDates, recipes]);
+
+    // On phone widths the day cards scroll horizontally instead of stacking, so
+    // land on today instead of Sunday. Re-runs on week navigation too, landing
+    // on the first day of whatever week was just switched to.
+    useEffect(() => {
+        const container = scrollContainerRef.current;
+        if (!container) return;
+        const targetDate = weekDates.includes(todayStr) ? todayStr : weekDates[0];
+        const card = container.querySelector(`[data-date="${targetDate}"]`);
+        if (card) card.scrollIntoView({ inline: 'center', block: 'nearest' });
+    }, [weekDates]);
 
     // The generated review belongs to the week it came from. Drop it on navigation
     // so last week's ingredients don't sit under the new week's plan. Keyed on
@@ -395,15 +407,37 @@ function MealPlan() {
                 </div>
             </div>
 
-            {/* Calendar Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-3">
+            {/* Day picker — phone only. Taps the horizontal carousel below to that day. */}
+            <div className="grid grid-cols-7 gap-1.5 mb-3 md:hidden">
+                {weekDates.map(dateStr => {
+                    const isToday = dateStr === todayStr;
+                    return (
+                        <button
+                            key={dateStr}
+                            onClick={() => scrollContainerRef.current?.querySelector(`[data-date="${dateStr}"]`)?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' })}
+                            className={`flex flex-col items-center py-1.5 rounded-lg text-[10px] font-bold transition-colors ${isToday ? 'bg-accent text-white' : 'bg-stone-100 text-stone-600'}`}
+                        >
+                            <span>{new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'narrow' })}</span>
+                            <span>{new Date(dateStr + 'T00:00:00').getDate()}</span>
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* Calendar Grid — a horizontal snap-scroll carousel on phone widths
+                (stacking 7 full-width cards made "today" a scroll away), a plain
+                grid from md up. */}
+            <div
+                ref={scrollContainerRef}
+                className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-4 md:overflow-visible lg:grid-cols-7"
+            >
                 {weekDates.map(dateStr => {
                     const isToday = dateStr === todayStr;
                     const dayNutri = dailyNutrition[dateStr];
                     const dayPlan = plan[dateStr];
 
                     return (
-                        <div key={dateStr} className={`relative p-3 rounded-xl border-2 transition-all ${isToday ? 'bg-accent-soft border-accent-line ring-2 ring-accent-line' : 'bg-white border-line hover:border-line'}`}>
+                        <div key={dateStr} data-date={dateStr} className={`relative p-3 rounded-xl border-2 transition-all shrink-0 w-[82%] snap-center md:w-auto md:shrink ${isToday ? 'bg-accent-soft border-accent-line ring-2 ring-accent-line' : 'bg-white border-line hover:border-line'}`}>
                             <div className="text-center mb-3">
                                 <div className="text-[10px] font-bold text-stone-600 uppercase">{new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' })}</div>
                                 <div className="text-lg font-bold text-stone-900">{new Date(dateStr + 'T00:00:00').getDate()}</div>
