@@ -502,16 +502,18 @@ function Recipes() {
                     <div className="flex flex-col lg:flex-row gap-8">
                         {/* List Column */}
                         <div className="lg:w-1/3">
-                            <h3 className="font-sans text-[10px] font-black uppercase tracking-widest text-stone-600 mb-4">Recipe List</h3>
-                            <ul className="space-y-2 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-                                {recipes.map(recipe => (
-                                    <li key={recipe.id}
-                                        className={`p-4 rounded-xl border transition-all cursor-pointer hover:shadow-sm ${selectedRecipe?.id === recipe.id ? 'bg-accent-soft border-accent-line text-accent-dark font-bold' : 'bg-white border-line'}`}
-                                        onClick={() => handleSelectRecipe(recipe)}>
-                                        {recipe.name}
-                                    </li>
-                                ))}
-                            </ul>
+                            <div className="p-4 border border-line rounded-xl bg-stone-50">
+                                <h3 className="font-sans text-[10px] font-black uppercase tracking-widest text-stone-600 mb-4">Recipe List</h3>
+                                <ul className="space-y-2 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                                    {recipes.map(recipe => (
+                                        <li key={recipe.id}
+                                            className={`p-4 rounded-xl border transition-all cursor-pointer hover:shadow-sm ${selectedRecipe?.id === recipe.id ? 'bg-accent-soft border-accent-line text-accent-dark font-bold' : 'bg-white border-line'}`}
+                                            onClick={() => handleSelectRecipe(recipe)}>
+                                            {recipe.name}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
                         </div>
 
                         {/* Detail Column */}
