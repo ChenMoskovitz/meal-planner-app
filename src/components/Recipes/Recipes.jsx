@@ -461,7 +461,7 @@ function Recipes() {
                 <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                     {/* Create Recipe Header */}
                     <div className="mb-8 p-4 bg-stone-50 rounded-xl border border-line shadow-sm">
-                        <div className="flex gap-3">
+                        <div className="flex flex-col md:flex-row gap-3">
                             <input
                                 className={`flex-1 px-4 py-2 border rounded-lg outline-none transition-colors ${
                                     titleError ? 'border-bad bg-bad-soft' : 'border-stone-300 focus:border-accent'
@@ -518,12 +518,12 @@ function Recipes() {
                         <div className="lg:w-2/3 min-h-[400px]">
                             {selectedRecipe ? (
                                 <div className="p-6 bg-white rounded-2xl border border-line shadow-sm animate-in fade-in slide-in-from-right-4">
-                                    <div className="flex justify-between items-center mb-6">
+                                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
                                         <h2 className="text-3xl font-black text-stone-900">
                                             {selectedRecipe.name}
                                         </h2>
 
-                                        <div className="flex gap-2">
+                                        <div className="flex gap-2 flex-wrap">
                                             <button
                                                 onClick={() => calculateRecipeNutrition(selectedRecipe.id)}
                                                 className="text-xs font-bold bg-accent-soft text-accent px-4 py-2 rounded-lg hover:bg-accent-line transition-colors"
@@ -584,8 +584,8 @@ function Recipes() {
                                         <div className="p-5 bg-stone-50 rounded-2xl border border-line">
                                             <label className="block text-sm font-bold text-stone-600 uppercase mb-4 tracking-tighter">Add Ingredients from API</label>
 
-                                            <div className="flex items-end gap-3 mb-6">
-                                                <div className="flex-1">
+                                            <div className="flex flex-col sm:flex-row sm:items-end gap-3 mb-6">
+                                                <div className="flex-1 min-w-0">
                                                     <label className="block text-[10px] font-bold text-stone-600 uppercase mb-1 ml-1">Search Food</label>
                                                     <IngredientSearch key={selectedRecipe.id} hideLabel onSelect={(food) => {
                                                         setLastSelectedFood(food);
@@ -593,32 +593,34 @@ function Recipes() {
                                                         lookupIngredientUnit(food.label);
                                                     }} />
                                                 </div>
-                                                <div className="w-24">
-                                                    <label className="block text-[10px] font-bold text-stone-600 uppercase mb-1 ml-1">Qty ({selectedUnit})</label>
-                                                    <input
-                                                        type="number"
-                                                        value={amount}
-                                                        onChange={(e) => setAmount(Number(e.target.value))}
-                                                        className={`w-full h-[42px] px-3 border rounded-xl outline-none transition-all ${
-                                                            errors.amount ? 'border-bad bg-bad-soft' : 'border-stone-300'
-                                                        }`}
-                                                        placeholder="0"
-                                                    />
+                                                <div className="flex gap-3">
+                                                    <div className="w-24">
+                                                        <label className="block text-[10px] font-bold text-stone-600 uppercase mb-1 ml-1">Qty ({selectedUnit})</label>
+                                                        <input
+                                                            type="number"
+                                                            value={amount}
+                                                            onChange={(e) => setAmount(Number(e.target.value))}
+                                                            className={`w-full h-[42px] px-3 border rounded-xl outline-none transition-all ${
+                                                                errors.amount ? 'border-bad bg-bad-soft' : 'border-stone-300'
+                                                            }`}
+                                                            placeholder="0"
+                                                        />
+                                                    </div>
+                                                    <button
+                                                        onClick={() => {
+                                                            if (!lastSelectedFood) {
+                                                                setErrors(prev => ({ ...prev, name: true }));
+                                                                return;
+                                                            }
+                                                            handleApiIngredientSelect(lastSelectedFood);
+                                                            setLastSelectedFood(null); // Clear it after adding so the same item isn't added twice by mistake
+                                                            setSelectedUnit('g');
+                                                        }}
+                                                        className="h-[42px] px-6 bg-accent hover:bg-accent-dark text-white font-bold rounded-xl shadow-sm transition-all active:scale-95"
+                                                    >
+                                                        Add
+                                                    </button>
                                                 </div>
-                                                <button
-                                                    onClick={() => {
-                                                        if (!lastSelectedFood) {
-                                                            setErrors(prev => ({ ...prev, name: true }));
-                                                            return;
-                                                        }
-                                                        handleApiIngredientSelect(lastSelectedFood);
-                                                        setLastSelectedFood(null); // Clear it after adding so the same item isn't added twice by mistake
-                                                        setSelectedUnit('g');
-                                                    }}
-                                                    className="h-[42px] px-6 bg-accent hover:bg-accent-dark text-white font-bold rounded-xl shadow-sm transition-all active:scale-95"
-                                                >
-                                                    Add
-                                                </button>
                                             </div>
 
                                             {errors.amount && <p className="text-bad text-[10px] font-bold -mt-4 mb-4 ml-1">Enter amount first</p>}
